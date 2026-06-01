@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Hustl{% endblock %} · Blue Collar Staffing Platform</title>
+
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome 6 -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet" />
+  <!-- Custom CSS -->
+  <link href="/static/css/style.css" rel="stylesheet" />
+  {% block head %}{% endblock %}
+</head>
+<body class="si-app">
+
+  <!-- ── Sidebar ───────────────────────────────────────────────────────── -->
+  <aside id="sidebar" class="si-sidebar">
+
+    <!-- Brand -->
+    <div class="si-brand">
+      <i class="fas fa-hard-hat si-brand-icon"></i>
+      <div>
+        <div class="si-brand-name">Hustl</div>
+        <div class="si-brand-sub">Blue Collar Platform</div>
+      </div>
+    </div>
+
+    <!-- User card -->
+    {% if current_user %}
+    <div class="si-user-card">
+      <div class="si-avatar">{{ current_user.initials }}</div>
+      <div class="si-user-info">
+        <div class="si-user-name">{{ current_user.full_name }}</div>
+        <div class="si-user-role">{{ current_user.role_display }}</div>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <nav class="si-nav">
+      <a class="si-nav-link {% if request.url.path == '/dashboard' %}active{% endif %}"
+         href="/dashboard">
+        <i class="fas fa-tachometer-alt"></i><span>Dashboard</span>
+      </a>
+
+      {% if current_user and current_user.role.value == 'institution' %}
+      <div class="si-nav-section">Institution</div>
+      <a class="si-nav-link {% if '/institutions/students' in request.url.path %}active{% endif %}"
+         href="/institutions/students">
+        <i class="fas fa-user-graduate"></i><span>Current Students</span>
+      </a>
+      <a class="si-nav-link {% if request.url.path == '/institutions/past-students' %}active{% endif %}"
+         href="/institutions/past-students">
+        <i class="fas fa-user-clock"></i><span>Past Students</span>
+      </a>
+      <div class="si-nav-section">Bulk Upload</div>
+      <a class="si-nav-link {% if request.url.path == '/institutions/bulk-upload' %}active{% endif %}"
+         href="/institutions/bulk-upload">
+        <i class="fas fa-file-upload"></i><span>Bulk Upload to Layam</span>
+      </a>
+      {% elif current_user and current_user.role.value == 'employer' %}
+      <div class="si-nav-section">Jobs</div>
+      <a class="si-nav-link {% if request.url.path == '/jobs/new' %}active{% endif %}"
+         href="/jobs/new">
+        <i class="fas fa-plus"></i><span>Post Job</span>
+      </a>
+      <a class="si-nav-link {% if request.url.path == '/jobs' and 'view=open' in request.url.query %}active{% endif %}"
+        href="/jobs?status=active&view=open">
+        <i class="fas fa-circle-check"></i><span>Current Open Positions</span>
+      </a>
+      <a class="si-nav-link {% if request.url.path == '/jobs' and 'view=status' in request.url.query %}active{% endif %}"
+        href="/jobs?view=status">
+        <i class="fas fa-briefcase"></i><span>Job Posting Statuses</span>
+      </a>
+      <div class="si-nav-section">Company</div>
+      <a class="si-nav-link {% if request.url.path == '/config/company' %}active{% endif %}"
+         href="/config/company">
+        <i class="fas fa-building"></i><span>Company Profile</span>
+      </a>
+      <div class="si-nav-section">Reports</div>
+      <a class="si-nav-link {% if '/reports' in request.url.path %}active{% endif %}"
+         href="/reports">
+        <i class="fas fa-chart-line"></i><span>Reports</span>
+      </a>
+      {% else %}
+      <!-- Admin -->
+      {% if current_user and current_user.role.value == 'admin' %}
+      <div class="si-nav-section">Administration</div>
+      <a class="si-nav-link {% if '/admin/users' in request.url.path %}active{% endif %}"
+         href="/admin/users">
+        <i class="fas fa-users-cog"></i><span>User Management</span>
+      </a>
+      <a class="si-nav-link {% if request.url.path == '/admin/candidate-access-logs' %}active{% endif %}"
+         href="/admin/candidate-access-logs">
+        <i class="fas fa-clipboard-list"></i><span>Candidate Access Logs</span>
+      </a>
+      <a class="si-nav-link {% if '/admin/field-agent-locations' in request.url.path %}active{% endif %}"
+         href="/admin/field-agent-locations">
+        <i class="fas fa-location-dot"></i><span>Field Agent Logs</span>
+      </a>
+      {% endif %}
+
+      {% if current_user %}
+      <div class="si-nav-section">Reports</div>
+      <a class="si-nav-link {% if '/reports' in request.url.path %}active{% endif %}"
+         href="/reports">
+        <i class="fas fa-chart-line"></i><span>Reports</span>
+      </a>
+      {% endif %}
+
+      <!-- Recruitment -->
+      {% if current_user and current_user.role.value in ['admin','manager','recruiter','field_agent'] %}
+      <div class="si-nav-section">Recruitment</div>
+      <a class="si-nav-link {% if '/candidates' in request.url.path %}active{% endif %}"
+         href="/candidates">
+        <i class="fas fa-user-friends"></i><span>Candidates</span>
+      </a>
+      <a class="si-nav-link {% if '/jobs' in request.url.path %}active{% endif %}"
+         href="/jobs">
+        <i class="fas fa-briefcase"></i><span>Job Postings</span>
+      </a>
+      {% endif %}
+
+      <!-- Institutions -->
+      {% if current_user and current_user.role.value in ['admin','employer'] %}
+      <a class="si-nav-link {% if '/institutions' in request.url.path %}active{% endif %}"
+         href="/institutions">
+        <i class="fas fa-university"></i><span>Institutions</span>
+      </a>
+      {% endif %}
+
+      <!-- Configuration -->
+      {% if current_user and current_user.role.value in ['admin','employer'] %}
+      <div class="si-nav-section">Configuration</div>
+      {% if current_user.role.value == 'admin' %}
+      <a class="si-nav-link {% if request.url.path == '/config/app' %}active{% endif %}"
+         href="/config/app">
+        <i class="fas fa-sliders-h"></i><span>App Settings</span>
+      </a>
+      {% endif %}
+      <a class="si-nav-link {% if request.url.path == '/config/company' %}active{% endif %}"
+         href="/config/company">
+        <i class="fas fa-building"></i><span>Company Config</span>
+      </a>
+      <a class="si-nav-link {% if request.url.path == '/config/email' %}active{% endif %}"
+         href="/config/email">
+        <i class="fas fa-envelope-open-text"></i><span>Email Config</span>
+      </a>
+      <a class="si-nav-link {% if '/config/recruitment-sources' in request.url.path %}active{% endif %}"
+         href="/config/recruitment-sources">
+        <i class="fas fa-project-diagram"></i><span>Recruitment Sources</span>
+      </a>
+      <a class="si-nav-link {% if '/jobs' in request.url.path %}active{% endif %}"
+         href="/jobs">
+        <i class="fas fa-briefcase"></i><span>Job Postings</span>
+      </a>
+      <a class="si-nav-link {% if '/config/job-profiles' in request.url.path %}active{% endif %}"
+         href="/config/job-profiles">
+        <i class="fas fa-file-lines"></i><span>Job Profiles</span>
+      </a>
+      <a class="si-nav-link {% if '/config/interview-questions' in request.url.path %}active{% endif %}"
+         href="/config/interview-questions">
+        <i class="fas fa-circle-question"></i><span>Interview Questions</span>
+      </a>
+      {% endif %}
+      {% endif %}
+
+    </nav>
+
+    <!-- Logout at bottom -->
+    <div class="si-sidebar-footer">
+      <a class="si-nav-link si-logout" href="/logout">
+        <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main area ─────────────────────────────────────────────────────── -->
+  <div id="main" class="si-main">
+
+    <!-- Top bar -->
+    <header class="si-topbar">
+      <div class="si-topbar-left">
+        <button class="si-toggle-btn" id="sidebarToggle" title="Toggle sidebar">
+          <i class="fas fa-bars"></i>
+        </button>
+        <div class="si-breadcrumb">
+          <span class="si-breadcrumb-label">Home</span>
+          <i class="fas fa-chevron-right"></i>
+          <span class="si-breadcrumb-current">{{ page_title or 'Dashboard' }}</span>
+        </div>
+      </div>
+
+      <div class="si-topbar-center">
+        <div class="si-search">
+          <i class="fas fa-search"></i>
+          <input type="text" placeholder="Search candidates, users, companies" />
+          <span class="si-search-kbd">Ctrl K</span>
+        </div>
+      </div>
+
+      <div class="si-topbar-right">
+        {% if current_user %}
+        <span class="si-chip si-license-badge">
+          <i class="fas fa-id-card"></i>
+          {{ current_user.license_type.value | title }}
+        </span>
+        <button class="si-icon-btn" title="Notifications">
+          <i class="fas fa-bell"></i>
+          <span class="si-dot"></span>
+        </button>
+        <button class="si-icon-btn" title="Help">
+          <i class="fas fa-circle-question"></i>
+        </button>
+        <div class="si-profile">
+          <div class="si-avatar-sm">{{ current_user.initials }}</div>
+          <div class="si-profile-meta">
+            <div class="si-profile-name">{{ current_user.full_name }}</div>
+            <div class="si-profile-role">{{ current_user.role_display }}</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </header>
+
+    <!-- Flash messages -->
+    <div class="si-flash-zone">
+      {% for msg in flash_messages %}
+      <div class="alert alert-{{ 'danger' if msg.category == 'error' else msg.category }} alert-dismissible fade show si-alert" role="alert">
+        {% if msg.category == 'success' %}<i class="fas fa-check-circle me-2"></i>
+        {% elif msg.category == 'danger' %}<i class="fas fa-exclamation-circle me-2"></i>
+        {% elif msg.category == 'warning' %}<i class="fas fa-exclamation-triangle me-2"></i>
+        {% else %}<i class="fas fa-info-circle me-2"></i>{% endif %}
+        {{ msg.message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Page content -->
+    <main class="si-content">
+      {% block content %}{% endblock %}
+    </main>
+
+    <footer class="si-footer">
+      &copy; 2026 Hustl &mdash; Blue Collar Staffing Platform. All rights reserved.
+    </footer>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Custom JS -->
+  <script src="/static/js/main.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

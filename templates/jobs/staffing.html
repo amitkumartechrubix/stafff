@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-clipboard-check text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">Staffing workflow</small>
+  </div>
+  <a href="/jobs/{{ job.id }}" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left me-1"></i>Back to Job
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom fw-semibold">
+    <i class="fas fa-clipboard-list text-warning me-2"></i>Position Summary
+  </div>
+  <div class="card-body">
+    <div class="row g-3">
+      <div class="col-12">
+        <div class="text-muted small">Summary</div>
+        <div class="fw-semibold">
+          {{ job.designation or job.role_title or 'This role' }}
+          at {{ job.company.name if job.company else (job.company_name or job.title or 'the company') }}
+          in {{ job.location or (job.city ~ (', ' ~ job.state if job.state else '')) or 'the listed location' }}.
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-muted small">Openings</div>
+        <div class="fw-semibold">{{ job.openings or '-' }}</div>
+      </div>
+      <div class="col-md-8">
+        <div class="text-muted small">Skills</div>
+        <div class="fw-semibold">{{ job.skills or '-' }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% if current_user and current_user.role.value == 'recruiter' %}
+<div class="card border-0 shadow-sm mt-4">
+  <div class="card-header bg-white border-bottom fw-semibold">
+    <i class="fas fa-user-friends text-warning me-2"></i>Assigned Candidates
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Location</th>
+            <th>Qualification</th>
+            <th>Age</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Locked Position</th>
+            <th class="text-center">Lock</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in assigned_candidates %}
+          <tr class="js-row-link" data-href="/candidates/{{ c.id }}">
+            <td class="fw-semibold">{{ c.full_name }}</td>
+            <td>{{ c.phone }}</td>
+            <td class="small">{{ (c.city or '') + (', ' + c.state if c.state else '') or '—' }}</td>
+            <td class="small">{{ c.qualification or '—' }}</td>
+            <td class="small">{{ c.age or '—' }}</td>
+            <td>
+              <span class="badge
+                {{ 'bg-success' if c.status.value == 'active' else
+                   'bg-primary' if c.status.value == 'placed' else
+                   'bg-danger' if c.status.value == 'blacklisted' else
+                   'bg-secondary' }}">
+                {{ c.status.value | title }}
+              </span>
+            </td>
+            <td class="text-muted small">{{ c.registered_at.strftime('%d %b %Y') }}</td>
+            <td class="small">
+              {% if c.locked_job_id and c.locked_job %}
+              {{ c.locked_job.designation or c.locked_job.role_title or c.locked_job.title or 'Position' }}
+              {% else %}
+              —
+              {% endif %}
+            </td>
+            <td class="text-center">
+              {% if c.locked_job_id == job.id %}
+              <div class="d-flex flex-column gap-2 align-items-center">
+                <span class="badge bg-success">Locked</span>
+                <form method="POST" action="/candidates/{{ c.id }}/unlock" onsubmit="return promptReason(this, 'Enter reason for unlocking this candidate.');">
+                  <input type="hidden" name="next" value="/jobs/{{ job.id }}/staffing" />
+                  <input type="hidden" name="reason" value="" />
+                  <button type="submit" class="btn btn-outline-danger btn-sm">Unlock</button>
+                </form>
+              </div>
+              {% else %}
+              <form method="POST" action="/jobs/{{ job.id }}/lock-candidate" class="d-flex flex-column gap-2 align-items-center">
+                <input type="hidden" name="candidate_id" value="{{ c.id }}" />
+                <select name="position_id" class="form-select form-select-sm" required>
+                  <option value="">Select position</option>
+                  {% for p in assigned_positions %}
+                  <option value="{{ p.id }}" {% if p.id == job.id %}selected{% endif %}>
+                    {{ p.designation or p.role_title or p.title or 'Position' }}
+                  </option>
+                  {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-outline-secondary btn-sm">Lock</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center text-muted py-4">No assigned candidates yet.</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+<script>
+  function promptReason(form, message) {
+    const reason = window.prompt(message);
+    if (reason === null) {
+      return false;
+    }
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      window.alert("Reason is required.");
+      return false;
+    }
+    const input = form.querySelector('input[name="reason"]');
+    if (input) {
+      input.value = trimmed;
+    }
+    return true;
+  }
+</script>
+{% endblock %}

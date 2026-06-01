@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-chart-line text-warning me-2"></i>Reports</h4>
+    <small class="text-muted">Build, share, and analyze reports across the platform.</small>
+  </div>
+  {% if can_create_reports %}
+  <a href="/reports/new" class="btn btn-warning fw-semibold">
+    <i class="fas fa-plus me-2"></i>Create Report
+  </a>
+  {% endif %}
+</div>
+
+<ul class="nav nav-tabs mb-3">
+  <li class="nav-item">
+    <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#myReports" type="button">My Reports</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#sharedReports" type="button">Shared Reports</button>
+  </li>
+  <li class="nav-item">
+    <button class="nav-link" data-bs-toggle="tab" data-bs-target="#templates" type="button">Templates</button>
+  </li>
+</ul>
+
+<div class="tab-content">
+  <div class="tab-pane fade show active" id="myReports">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Source</th>
+                <th>View</th>
+                <th>Updated</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in my_reports %}
+              <tr class="js-row-link" data-href="/reports/{{ r.id }}">
+                <td class="fw-semibold">{{ r.name }}</td>
+                <td class="text-muted small">{{ r.base_table.replace('_',' ').title() }}</td>
+                <td class="text-muted small">{{ r.view_mode | title }}</td>
+                <td class="text-muted small">{{ r.updated_at.strftime('%d %b %Y') if r.updated_at else '' }}</td>
+                <td class="text-center">
+                  <div class="btn-group btn-group-sm">
+                    <a href="/reports/{{ r.id }}" class="btn btn-outline-primary" title="Open">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    {% if is_admin or (current_user and current_user.role.value == 'manager') %}
+                    <a href="/reports/{{ r.id }}/edit" class="btn btn-outline-secondary" title="Edit">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <form method="POST" action="/reports/{{ r.id }}/delete" onsubmit="return confirm('Delete this report?')">
+                      <button type="submit" class="btn btn-outline-danger" title="Delete">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </form>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No reports created yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="sharedReports">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Source</th>
+                <th>View</th>
+                <th>Updated</th>
+                <th class="text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in shared_reports %}
+              <tr>
+                <td class="fw-semibold">{{ r.name }}</td>
+                <td class="text-muted small">{{ r.base_table.replace('_',' ').title() }}</td>
+                <td class="text-muted small">{{ r.view_mode | title }}</td>
+                <td class="text-muted small">{{ r.updated_at.strftime('%d %b %Y') if r.updated_at else '' }}</td>
+                <td class="text-center">
+                  <a href="/reports/{{ r.id }}" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No shared reports yet.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab-pane fade" id="templates">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Name</th>
+                <th>Source</th>
+                <th>View</th>
+                <th>Updated</th>
+                <th class="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in templates %}
+              <tr>
+                <td class="fw-semibold">{{ r.name }}</td>
+                <td class="text-muted small">{{ r.base_table.replace('_',' ').title() }}</td>
+                <td class="text-muted small">{{ r.view_mode | title }}</td>
+                <td class="text-muted small">{{ r.updated_at.strftime('%d %b %Y') if r.updated_at else '' }}</td>
+                <td class="text-center">
+                  <div class="btn-group btn-group-sm">
+                    <a href="/reports/{{ r.id }}" class="btn btn-outline-primary" title="View">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <form method="POST" action="/reports/{{ r.id }}/clone">
+                      <button type="submit" class="btn btn-outline-secondary" title="Clone">
+                        <i class="fas fa-clone"></i>
+                      </button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="5" class="text-center text-muted py-4">No templates available.</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,368 @@
+{% extends "base.html" %}
+{% block title %}Field Agent Dashboard{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-4 flex-wrap gap-3">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-walking text-warning me-2"></i>Field Agent Dashboard</h4>
+    <small class="text-muted">Welcome, {{ current_user.full_name }}. Share your link or enroll candidates directly.</small>
+  </div>
+  <div class="si-location-card">
+    <div class="d-flex align-items-center justify-content-between mb-1">
+      <div class="fw-semibold"><i class="fas fa-location-dot text-primary me-1"></i>Current Location</div>
+      <button class="btn btn-outline-primary btn-xs" type="button" id="refreshLocation">Refresh</button>
+    </div>
+    <div class="small text-muted" id="faLocationStatus">Fetching GPS…</div>
+    <div class="small"><span class="fw-semibold" id="faLocationCoords">—</span></div>
+    <div class="small text-muted" id="faLocationAddress">—</div>
+    <div class="mt-1">
+      <span class="badge bg-info text-dark" id="faLocationAccuracy">Accuracy: —</span>
+    </div>
+  </div>
+</div>
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/candidates">
+      <div class="si-stat-card si-stat-purple">
+        <div class="si-stat-icon"><i class="fas fa-user-friends"></i></div>
+        <div class="si-stat-value">{{ my_candidates_count }}</div>
+        <div class="si-stat-label">Total Enrolled</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="si-stat-card">
+      <div class="si-stat-icon"><i class="fas fa-calendar-day"></i></div>
+      <div class="si-stat-value">{{ field_today or 0 }}</div>
+      <div class="si-stat-label">Today</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="si-stat-card">
+      <div class="si-stat-icon"><i class="fas fa-calendar-week"></i></div>
+      <div class="si-stat-value">{{ field_week or 0 }}</div>
+      <div class="si-stat-label">Last 7 Days</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="si-stat-card">
+      <div class="si-stat-icon"><i class="fas fa-qrcode"></i></div>
+      <div class="si-stat-value">{{ field_qr or 0 }}</div>
+      <div class="si-stat-label">QR Registrations</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-6 col-md-3">
+    <div class="si-stat-card">
+      <div class="si-stat-icon"><i class="fas fa-check-circle"></i></div>
+      <div class="si-stat-value">{{ field_active or 0 }}</div>
+      <div class="si-stat-label">Active</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="si-stat-card">
+      <div class="si-stat-icon"><i class="fas fa-child"></i></div>
+      <div class="si-stat-value">{{ field_minors or 0 }}</div>
+      <div class="si-stat-label">Minors</div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="si-stat-card">
+      <div class="si-stat-icon"><i class="fas fa-clipboard-check"></i></div>
+      <div class="si-stat-value">{{ field_followups or 0 }}</div>
+      <div class="si-stat-label">Pending Follow-ups</div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+          <div>
+            <div class="text-muted small">Candidates Enrolled</div>
+            <div class="fs-3 fw-bold">{{ my_candidates_count }}</div>
+          </div>
+          <div class="text-warning"><i class="fas fa-user-friends fa-2x"></i></div>
+        </div>
+        <div class="d-grid gap-2">
+          <a href="/candidates/new" class="btn btn-danger btn-sm fw-semibold">
+            <i class="fas fa-user-plus me-1"></i>Enroll Candidate
+          </a>
+          <a href="/candidates" class="btn btn-outline-secondary btn-sm fw-semibold">
+            <i class="fas fa-list-ul me-1"></i>View My Candidates
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-body">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div>
+            <h6 class="fw-bold mb-1">Registration Link + QR</h6>
+            <p class="text-muted small mb-0">Set location and setup type before sharing.</p>
+          </div>
+          {% set reg_link = request.base_url ~ 'candidates/register?ref=' ~ current_user.id %}
+          <div class="d-flex align-items-center gap-2 flex-wrap">
+            <input type="text" class="form-control form-control-sm" style="min-width:260px;" id="fieldAgentRegLink"
+                   value="{{ reg_link }}" readonly />
+            <button class="btn btn-outline-primary btn-sm" type="button" id="copyRegLink">Copy Link</button>
+          </div>
+        </div>
+        <div class="row g-2 mt-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold mb-1">Setup Type</label>
+            <select class="form-select form-select-sm" id="setupType">
+              <option value="Canopy">Canopy</option>
+              <option value="College">College</option>
+              <option value="Custom">Custom</option>
+            </select>
+            <input type="text" class="form-control form-control-sm mt-2 d-none" id="setupTypeCustom"
+                   placeholder="Enter custom setup type" />
+          </div>
+        </div>
+        <div class="mt-2 d-flex gap-2">
+          <button class="btn btn-primary btn-sm" type="button" id="saveSetup">Save Location</button>
+          <span class="text-muted small" id="setupSavedMsg" style="display:none;">Saved</span>
+        </div>
+        <div class="mt-3 d-flex align-items-center gap-3 flex-wrap">
+          <img id="fieldAgentQr"
+               src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data={{ reg_link | urlencode }}"
+               alt="Candidate registration QR" width="140" height="140" />
+          <div class="text-muted small">
+            Scan to open the registration form on any phone.
+          </div>
+        </div>
+        <hr class="my-3" />
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold mb-1">Share via Email</label>
+            <div class="input-group input-group-sm">
+              <input type="email" class="form-control" id="shareEmail" placeholder="name@example.com" />
+              <button class="btn btn-outline-primary" type="button" id="shareEmailBtn">Send</button>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-semibold mb-1">Share via WhatsApp</label>
+            <div class="input-group input-group-sm">
+              <input type="tel" class="form-control" id="shareWhatsapp" placeholder="91XXXXXXXXXX" />
+              <button class="btn btn-outline-success" type="button" id="shareWhatsappBtn">Send</button>
+            </div>
+          </div>
+          <div class="col-12">
+            <small class="text-muted">Uses your device email/WhatsApp apps to send the link.</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const btn = document.getElementById("copyRegLink");
+    const input = document.getElementById("fieldAgentRegLink");
+    const setupType = document.getElementById("setupType");
+    const setupTypeCustom = document.getElementById("setupTypeCustom");
+    const qrImg = document.getElementById("fieldAgentQr");
+    const shareEmail = document.getElementById("shareEmail");
+    const shareWhatsapp = document.getElementById("shareWhatsapp");
+    const shareEmailBtn = document.getElementById("shareEmailBtn");
+    const shareWhatsappBtn = document.getElementById("shareWhatsappBtn");
+    const locationStatus = document.getElementById("faLocationStatus");
+    const locationCoords = document.getElementById("faLocationCoords");
+    const locationAddress = document.getElementById("faLocationAddress");
+    const locationAccuracy = document.getElementById("faLocationAccuracy");
+    const refreshLocation = document.getElementById("refreshLocation");
+    let lastLocation = { lat: null, lon: null, accuracy: null, address: "" };
+    const baseLink = "{{ reg_link }}";
+    if (!btn || !input) return;
+
+    function currentSetupType() {
+      if (!setupType) return "";
+      if (setupType.value !== "Custom") return setupType.value;
+      return (setupTypeCustom && setupTypeCustom.value.trim()) || "Custom";
+    }
+
+    function updateLink() {
+      const params = new URLSearchParams();
+      params.set("ref", "{{ current_user.id }}");
+      const setupVal = currentSetupType();
+      if (setupVal) {
+        params.set("setup_type", setupVal);
+      }
+      const link = "{{ request.base_url }}candidates/register?" + params.toString();
+      input.value = link;
+      if (qrImg) {
+        qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=" + encodeURIComponent(link);
+      }
+    }
+
+    function currentLink() {
+      return input ? input.value : baseLink;
+    }
+
+    function loadSavedSetup() {
+      const savedType = localStorage.getItem("fa_setup_type") || "Canopy";
+      if (setupType) {
+        setupType.value = savedType === "Custom" ? "Custom" : savedType;
+        if (setupType.value === "Custom" && setupTypeCustom) {
+          setupTypeCustom.classList.remove("d-none");
+          setupTypeCustom.value = savedType === "Custom" ? "" : savedType;
+        }
+      }
+    }
+
+    btn.addEventListener("click", function () {
+      input.select();
+      input.setSelectionRange(0, 99999);
+      try {
+        document.execCommand("copy");
+        btn.textContent = "Copied";
+        setTimeout(function () {
+          btn.textContent = "Copy Link";
+        }, 1500);
+      } catch (err) {
+        btn.textContent = "Copy failed";
+      }
+    });
+
+    if (setupType) {
+      setupType.addEventListener("change", function () {
+        if (setupType.value === "Custom") {
+          setupTypeCustom.classList.remove("d-none");
+          setupTypeCustom.focus();
+        } else {
+          setupTypeCustom.classList.add("d-none");
+          setupTypeCustom.value = "";
+        }
+        updateLink();
+      });
+    }
+    if (setupTypeCustom) {
+      setupTypeCustom.addEventListener("input", updateLink);
+    }
+
+    const saveBtn = document.getElementById("saveSetup");
+    const savedMsg = document.getElementById("setupSavedMsg");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", function () {
+        const setupVal = currentSetupType();
+        localStorage.setItem("fa_setup_type", setupVal || "Canopy");
+        if (savedMsg) {
+          savedMsg.style.display = "inline";
+          setTimeout(function () {
+            savedMsg.style.display = "none";
+          }, 1500);
+        }
+        updateLink();
+      });
+    }
+
+    if (shareEmailBtn && shareEmail) {
+      shareEmailBtn.addEventListener("click", function () {
+        const email = shareEmail.value.trim();
+        if (!email) return;
+        const subject = encodeURIComponent("Candidate Registration Link");
+        const body = encodeURIComponent("Please use this link to register: " + currentLink());
+        window.location.href = "mailto:" + email + "?subject=" + subject + "&body=" + body;
+      });
+    }
+
+    if (shareWhatsappBtn && shareWhatsapp) {
+      shareWhatsappBtn.addEventListener("click", function () {
+        const phone = shareWhatsapp.value.trim();
+        if (!phone) return;
+        const text = encodeURIComponent("Please use this link to register: " + currentLink());
+        window.open("https://wa.me/" + phone + "?text=" + text, "_blank");
+      });
+    }
+
+    loadSavedSetup();
+    updateLink();
+
+    async function reverseGeocode(lat, lon) {
+      try {
+        const url = "https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=" +
+          encodeURIComponent(lat) + "&lon=" + encodeURIComponent(lon);
+        const res = await fetch(url, { headers: { "Accept": "application/json" } });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data && data.address ? data.address : null;
+      } catch (err) {
+        return null;
+      }
+    }
+
+    async function sendLocationPing() {
+        if (lastLocation.lat === null || lastLocation.lon === null) return;
+        try {
+          await fetch("/field-agent/location", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              latitude: lastLocation.lat,
+              longitude: lastLocation.lon,
+              accuracy_m: lastLocation.accuracy,
+              address: lastLocation.address,
+              setup_type: currentSetupType(),
+            }),
+          });
+        } catch (err) {
+          return;
+        }
+    }
+
+    async function updateLocation() {
+      if (!locationStatus || !locationCoords || !locationAddress || !locationAccuracy) return;
+      if (!navigator.geolocation) {
+        locationStatus.textContent = "GPS not supported";
+        return;
+      }
+      locationStatus.textContent = "Fetching GPS…";
+      navigator.geolocation.getCurrentPosition(async function (pos) {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lon = pos.coords.longitude.toFixed(6);
+        locationCoords.textContent = lat + ", " + lon;
+        locationAccuracy.textContent = "Accuracy: " + Math.round(pos.coords.accuracy) + " m";
+        locationStatus.textContent = "GPS locked";
+        lastLocation.lat = lat;
+        lastLocation.lon = lon;
+        lastLocation.accuracy = Math.round(pos.coords.accuracy);
+        const addr = await reverseGeocode(lat, lon);
+        if (addr) {
+          const poi = addr.attraction || addr.landmark || addr.tourism || addr.shop || addr.amenity || "";
+          const building = addr.building || addr.house_name || addr.house_number || "";
+          const road = addr.road || addr.neighbourhood || addr.suburb || "";
+          const city = addr.city || addr.town || addr.village || addr.county || "";
+          const state = addr.state || "";
+          const postcode = addr.postcode || "";
+          const country = addr.country || "";
+          const buildingLabel = building ? "Bldg: " + building : "";
+          const parts = [poi, buildingLabel, road, city, state, postcode, country].filter(Boolean);
+          locationAddress.textContent = parts.length ? parts.join(", ") : "Address unavailable";
+          lastLocation.address = locationAddress.textContent;
+        } else {
+          locationAddress.textContent = "Address unavailable";
+          lastLocation.address = "";
+        }
+        sendLocationPing();
+      }, function (err) {
+        locationStatus.textContent = "GPS error: " + (err.message || "Permission denied");
+      }, { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 });
+    }
+
+    if (refreshLocation) {
+      refreshLocation.addEventListener("click", updateLocation);
+    }
+    updateLocation();
+    setInterval(updateLocation, 2 * 60 * 60 * 1000);
+  });
+</script>
+{% endblock %}

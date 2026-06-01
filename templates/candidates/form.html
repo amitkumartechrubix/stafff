@@ -1,0 +1,422 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0">
+      <i class="fas fa-{{ 'user-plus' if not edit_candidate else 'user-edit' }} text-warning me-2"></i>
+      {{ page_title }}
+    </h4>
+  </div>
+  <a href="/candidates" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left me-1"></i>Back to Candidates
+  </a>
+</div>
+
+<form method="POST" action="{{ form_action }}" enctype="multipart/form-data" novalidate>
+<div class="row g-4">
+  <div class="col-lg-8">
+
+    <!-- Basic Information -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-user text-warning me-2"></i>Basic Information
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+            <input type="text" name="full_name" class="form-control"
+                   value="{{ edit_candidate.full_name if edit_candidate else '' }}" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+                {% if current_user and current_user.role.value in ['manager','recruiter','field_agent'] and edit_candidate and not can_view_phone %}
+                <div class="input-group phone-mask-group">
+                  <div class="phone-mask-wrapper">
+                    <input type="tel" name="phone" class="form-control phone-mask-input" id="phoneMasked"
+                           placeholder="+91 XXXXX XXXXX" required inputmode="numeric" autocomplete="tel" maxlength="10"
+                           value="{{ edit_candidate.phone }}" />
+                    <span class="phone-mask-display" id="phoneMaskDisplay"></span>
+                  </div>
+                  <button type="button" class="btn btn-outline-secondary" id="phoneToggle">Show</button>
+                </div>
+                <div class="invalid-feedback">Enter a 10-digit phone number.</div>
+                <div class="form-text">Phone is masked while typing. Use Show to verify.</div>
+                {% elif not edit_candidate %}
+                <div class="input-group phone-mask-group">
+                  <div class="phone-mask-wrapper">
+                    <input type="tel" name="phone" class="form-control phone-mask-input" id="phoneMasked"
+                           placeholder="+91 XXXXX XXXXX" required inputmode="numeric" autocomplete="tel" maxlength="10" />
+                    <span class="phone-mask-display" id="phoneMaskDisplay"></span>
+                  </div>
+                  <button type="button" class="btn btn-outline-secondary" id="phoneToggle">Show</button>
+                </div>
+                <div class="invalid-feedback">Enter a 10-digit phone number.</div>
+                <div class="form-text">Number is masked while typing. Use Show to verify.</div>
+                   {% else %}
+               <input type="tel" name="phone" class="form-control" placeholder="+91 XXXXX XXXXX"
+                 value="{{ edit_candidate.phone if edit_candidate else '' }}" required />
+               {% endif %}
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Email ID</label>
+            <input type="email" name="email" class="form-control" placeholder="candidate@email.com"
+                   value="{{ edit_candidate.email if edit_candidate else '' }}" />
+          </div>
+          {% if institution_name or (edit_candidate and edit_candidate.institution_name) %}
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Institution</label>
+            <input type="text" name="institution_name" class="form-control" readonly
+                   value="{{ institution_name if institution_name else edit_candidate.institution_name }}" />
+          </div>
+          {% endif %}
+          <div class="col-12" id="minorAlert" style="display:none;">
+            <div class="alert alert-warning mb-0">
+              Candidate is a minor (under 18). Please verify details before proceeding.
+            </div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Age</label>
+            <input type="number" name="age" class="form-control" min="0" placeholder="" readonly
+                   id="candidateAge" value="{{ edit_candidate.age if edit_candidate else '' }}" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Date of Birth</label>
+            <input type="date" name="date_of_birth" class="form-control" id="candidateDob"
+                   value="{{ edit_candidate.date_of_birth.isoformat() if edit_candidate and edit_candidate.date_of_birth else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Gender</label>
+            <select name="gender" class="form-select">
+              <option value="">— Select —</option>
+              <option {% if edit_candidate and edit_candidate.gender == 'Male' %}selected{% endif %}>Male</option>
+              <option {% if edit_candidate and edit_candidate.gender == 'Female' %}selected{% endif %}>Female</option>
+              <option {% if edit_candidate and edit_candidate.gender == 'Other' %}selected{% endif %}>Other</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Qualification</label>
+            <select name="qualification" class="form-select">
+              <option value="">— Select —</option>
+              {% set quals = ['Below 10th','10th Pass','12th Pass','ITI','Diploma','Graduate','Post Graduate','Other'] %}
+              {% for q in quals %}
+              <option {% if edit_candidate and edit_candidate.qualification == q %}selected{% endif %}>{{ q }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Aadhaar Number</label>
+            <input type="text" name="aadhaar_number" class="form-control" maxlength="14"
+                   placeholder="XXXX XXXX XXXX"
+                   value="{{ edit_candidate.aadhaar_number if edit_candidate else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Aadhaar Document</label>
+            <input type="file" name="aadhaar_file" class="form-control" accept=".jpg,.jpeg,.png" />
+            <div class="form-text">Upload JPG/PNG for OCR verification.</div>
+            {% if edit_candidate and edit_candidate.aadhaar_doc_path %}
+            <div class="form-text"><a href="{{ edit_candidate.aadhaar_doc_path }}" target="_blank">View current document</a></div>
+            {% endif %}
+          </div>
+          {% if edit_candidate and edit_candidate.aadhaar_ocr_status %}
+          {% set ocr_status = edit_candidate.aadhaar_ocr_status %}
+          {% set ocr_class = 'success' if ocr_status == 'verified' else 'danger' if ocr_status in ['mismatch', 'error'] else 'warning' %}
+          <div class="col-12">
+            <div class="alert alert-{{ ocr_class }} mb-0">
+              <strong>Aadhaar OCR:</strong> {{ ocr_status | title }}
+              {% if edit_candidate.aadhaar_ocr_notes %}
+              — {{ edit_candidate.aadhaar_ocr_notes }}
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Location -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-map-marker-alt text-warning me-2"></i>Location Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Location / Area</label>
+            <input type="text" name="location" class="form-control" placeholder="Dharavi, Mumbai"
+                   value="{{ edit_candidate.location if edit_candidate else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">City</label>
+              <select name="city" class="form-select js-city-select" id="candidateCity"
+                data-state-target="candidateState"
+                data-selected="{{ edit_candidate.city if edit_candidate else '' }}"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">State</label>
+              <select name="state" class="form-select js-state-select" id="candidateState"
+                data-selected="{{ edit_candidate.state if edit_candidate else '' }}"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Professional Details -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-briefcase text-warning me-2"></i>Professional Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Experience (Years)</label>
+            <input type="number" name="experience_years" class="form-control" min="0" placeholder="0"
+                   value="{{ edit_candidate.experience_years if edit_candidate else '0' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Preferred Job Type</label>
+            <select name="preferred_job_type" class="form-select">
+              <option value="">— Select —</option>
+              {% for jt in ['Construction','Manufacturing','Logistics','Security','Cleaning','Plumbing','Electrical','Welding','Carpentry','Driving','Retail','Other'] %}
+              <option {% if edit_candidate and edit_candidate.preferred_job_type == jt %}selected{% endif %}>{{ jt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Expected Salary (₹/month)</label>
+            <input type="text" name="expected_salary" class="form-control" placeholder="15,000"
+                   value="{{ edit_candidate.expected_salary if edit_candidate else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Passing Out Year</label>
+               <input type="number" name="passing_out_year" class="form-control" min="1900" max="2100"
+                 id="candidatePassingYear"
+                   value="{{ edit_candidate.passing_out_year if edit_candidate else '' }}" />
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Skills</label>
+            <textarea name="skills" class="form-control" rows="2"
+                      placeholder="e.g. Welding, Plumbing, Electrical wiring, Driving (LMV)…">{{ edit_candidate.skills if edit_candidate else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Source & Notes -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-project-diagram text-warning me-2"></i>Source & Notes
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Recruitment Source</label>
+            <select name="source_id" class="form-select">
+              <option value="">— Select Source —</option>
+              {% for s in sources %}
+              <option value="{{ s.id }}"
+                {% if edit_candidate and edit_candidate.source_id == s.id %}selected
+                {% elif default_source_id and default_source_id == s.id %}selected
+                {% endif %}>
+                {{ s.name }}
+              </option>
+              {% endfor %}
+            </select>
+            <div class="form-text">
+              Need a new source? <a href="/config/recruitment-sources" target="_blank">Add one here</a>.
+            </div>
+          </div>
+          {% if edit_candidate %}
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Status</label>
+            <select name="status" class="form-select">
+              {% for s in statuses %}
+              <option value="{{ s.value }}"
+                {% if edit_candidate.status.value == s.value %}selected{% endif %}>
+                {{ s.value | title }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+          {% endif %}
+          <div class="col-12">
+            <label class="form-label fw-semibold">Notes</label>
+            <textarea name="notes" class="form-control" rows="3"
+                      placeholder="Any additional notes about this candidate…">{{ edit_candidate.notes if edit_candidate else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right sidebar -->
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3 si-info-card">
+      <div class="card-body text-center py-4">
+        <div class="si-avatar-lg mx-auto mb-3">
+          {{ edit_candidate.full_name[0].upper() if edit_candidate else '?' }}
+        </div>
+        {% if edit_candidate %}
+        <h6 class="fw-bold">{{ edit_candidate.full_name }}</h6>
+        <p class="text-muted small">{{ mask_phone(edit_candidate.phone) }}</p>
+        <span class="badge
+          {{ 'bg-success' if edit_candidate.status.value == 'active' else 'bg-primary' if edit_candidate.status.value == 'placed' else 'bg-secondary' }}">
+          {{ edit_candidate.status.value | title }}
+        </span>
+        {% else %}
+        <p class="text-muted small">Fill in the form to register a new candidate.</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="d-grid gap-2">
+      {% if edit_candidate and show_layam_register and not edit_candidate.registered_with_layam and (edit_candidate.age is none or edit_candidate.age >= 18) %}
+      <form method="POST" action="/institutions/students/{{ edit_candidate.id }}/register-layam">
+        <button type="submit" class="btn btn-success fw-bold py-2" title="Register with Layam"
+                onclick="return confirm('Register this student with Layam?');">
+          <i class="fas fa-check-circle me-2"></i>Register with Layam
+        </button>
+      </form>
+      {% endif %}
+      <button type="submit" class="btn btn-warning fw-bold py-2">
+        <i class="fas fa-{{ 'save' if edit_candidate else 'user-plus' }} me-2"></i>
+        {{ 'Save Changes' if edit_candidate else 'Register Candidate' }}
+      </button>
+      <a href="/candidates" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const dobInput = document.getElementById("candidateDob");
+    const ageInput = document.getElementById("candidateAge");
+    const minorAlert = document.getElementById("minorAlert");
+    const passingYearInput = document.getElementById("candidatePassingYear");
+    const phoneMasked = document.getElementById("phoneMasked");
+    const phoneToggle = document.getElementById("phoneToggle");
+    const phoneMaskDisplay = document.getElementById("phoneMaskDisplay");
+
+    function calcAge(dob) {
+      const today = new Date();
+      let age = today.getFullYear() - dob.getFullYear();
+      const m = today.getMonth() - dob.getMonth();
+      if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) {
+        age -= 1;
+      }
+      return age;
+    }
+
+    function updateAge() {
+      if (!dobInput || !ageInput) return;
+      const value = dobInput.value;
+      if (!value) {
+        ageInput.value = "";
+        if (minorAlert) minorAlert.style.display = "none";
+        return;
+      }
+      const dob = new Date(value + "T00:00:00");
+      if (Number.isNaN(dob.getTime())) {
+        ageInput.value = "";
+        if (minorAlert) minorAlert.style.display = "none";
+        return;
+      }
+      const age = calcAge(dob);
+      ageInput.value = age >= 0 ? String(age) : "";
+      if (minorAlert) {
+        minorAlert.style.display = age >= 0 && age < 18 ? "block" : "none";
+      }
+    }
+
+    if (dobInput) {
+      dobInput.addEventListener("change", updateAge);
+      updateAge();
+    }
+
+    if (passingYearInput && !passingYearInput.value) {
+      passingYearInput.value = String(new Date().getFullYear());
+    }
+
+    if (phoneMasked && phoneToggle && phoneMaskDisplay) {
+      let showing = false;
+
+      const normalize = (value) => (value || "").replace(/\D/g, "");
+      const maskValue = (value) => {
+        if (!value) return "";
+        const chars = value.split("");
+        const masked = [];
+        for (let i = 0; i < chars.length; i += 2) {
+          masked.push(`${chars[i]}X`);
+        }
+        return masked.join("");
+      };
+
+      const clampValue = (value) => value.slice(0, 10);
+
+      const syncDisplay = () => {
+        const raw = clampValue(normalize(phoneMasked.value));
+        phoneMasked.value = raw;
+        phoneMaskDisplay.textContent = maskValue(raw);
+        if (showing) {
+          phoneMasked.classList.remove("phone-mask-hidden");
+          phoneMaskDisplay.classList.add("d-none");
+        } else {
+          phoneMasked.classList.add("phone-mask-hidden");
+          phoneMaskDisplay.classList.remove("d-none");
+        }
+        phoneToggle.textContent = showing ? "Hide" : "Show";
+      };
+
+      phoneMasked.addEventListener("input", function () {
+        syncDisplay();
+        if (phoneMasked.classList.contains("is-invalid") && phoneMasked.value.length === 10) {
+          phoneMasked.classList.remove("is-invalid");
+        }
+      });
+
+      let autoHideTimer = null;
+
+      phoneToggle.addEventListener("click", function () {
+        showing = !showing;
+        syncDisplay();
+
+        if (autoHideTimer) {
+          clearTimeout(autoHideTimer);
+          autoHideTimer = null;
+        }
+
+        if (showing) {
+          autoHideTimer = setTimeout(() => {
+            showing = false;
+            syncDisplay();
+            autoHideTimer = null;
+          }, 3000);
+        }
+      });
+
+      const form = phoneMasked.closest("form");
+      if (form) {
+        form.addEventListener("submit", function (e) {
+          const value = clampValue(normalize(phoneMasked.value));
+          phoneMasked.value = value;
+          if (value.length !== 10) {
+            e.preventDefault();
+            phoneMasked.classList.add("is-invalid");
+            phoneMasked.focus();
+          } else {
+            phoneMasked.classList.remove("is-invalid");
+          }
+        });
+      }
+
+      syncDisplay();
+    }
+  });
+</script>
+{% endblock %}

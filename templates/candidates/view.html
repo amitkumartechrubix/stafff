@@ -1,0 +1,458 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-user text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">Candidate record details</small>
+  </div>
+  <div class="d-flex gap-2">
+    {% if edit_url %}
+    <a href="{{ edit_url }}" class="btn btn-outline-primary btn-sm">
+      <i class="fas fa-edit me-1"></i>Edit
+    </a>
+    {% endif %}
+    <a href="{{ back_url or '/candidates' }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-arrow-left me-1"></i>{{ back_label or 'Back' }}
+    </a>
+  </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 align-items-center mb-4">
+  {% if current_user and current_user.role.value == 'recruiter' %}
+    {% if candidate.locked_job_id %}
+    <form method="POST" action="/candidates/{{ candidate.id }}/unlock" onsubmit="return promptReason(this, 'Enter reason for unlocking this candidate.');">
+      <input type="hidden" name="reason" value="" />
+      <button type="submit" class="btn btn-outline-danger btn-sm">Unlock Candidate</button>
+    </form>
+    {% else %}
+    <form method="POST" action="/candidates/{{ candidate.id }}/lock" class="d-flex gap-2 align-items-center">
+      <select name="position_id" class="form-select form-select-sm" required>
+        <option value="">Select position</option>
+        {% for p in assigned_positions %}
+        <option value="{{ p.id }}">
+          {{ p.designation or p.role_title or p.title or 'Position' }}
+        </option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-outline-secondary btn-sm">Lock Candidate</button>
+    </form>
+    {% endif %}
+  {% endif %}
+
+  <a href="/candidates/{{ candidate.id }}/round-1" class="btn btn-primary btn-sm">Initial Screening</a>
+
+  {% if current_user and current_user.role.value == 'recruiter' and round_one_completed and current_stage == 'locked' %}
+  <form method="POST" action="/candidates/{{ candidate.id }}/round-1/status">
+    <input type="hidden" name="decision" value="shortlisted" />
+    <button type="submit" class="btn btn-success btn-sm">Shortlisted</button>
+  </form>
+  <form method="POST" action="/candidates/{{ candidate.id }}/round-1/status" onsubmit="return promptReason(this, 'Enter reason for rejecting this candidate.');">
+    <input type="hidden" name="decision" value="not_shortlisted" />
+    <input type="hidden" name="reason" value="" />
+    <button type="submit" class="btn btn-outline-danger btn-sm">Rejected</button>
+  </form>
+  {% endif %}
+
+  {% if current_user and current_user.role.value == 'recruiter' and current_stage == 'shortlisted' %}
+  <form method="POST" action="/candidates/{{ candidate.id }}/stage">
+    <input type="hidden" name="stage" value="employer_interview" />
+    <button type="submit" class="btn btn-outline-primary btn-sm">Employer Interview</button>
+  </form>
+  {% endif %}
+
+  {% if current_user and current_user.role.value in ['recruiter','employer'] and current_stage == 'employer_interview' %}
+  <form method="POST" action="/candidates/{{ candidate.id }}/stage">
+    <input type="hidden" name="stage" value="document_collection" />
+    <button type="submit" class="btn btn-success btn-sm">Select</button>
+  </form>
+  <form method="POST" action="/candidates/{{ candidate.id }}/stage" onsubmit="return promptReason(this, 'Enter reason for rejecting this candidate.');">
+    <input type="hidden" name="stage" value="rejected" />
+    <input type="hidden" name="reason" value="" />
+    <button type="submit" class="btn btn-outline-danger btn-sm">Reject</button>
+  </form>
+  {% endif %}
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-header bg-white border-bottom fw-semibold">
+    <i class="fas fa-route text-warning me-2"></i>Employment Stage
+  </div>
+  <div class="card-body">
+    {% set stage_index = stage_order.index(current_stage) if current_stage in stage_order else 0 %}
+    <div class="d-flex flex-wrap gap-2">
+      {% for stage in stage_order %}
+      {% set idx = loop.index0 %}
+      {% set is_done = idx < stage_index %}
+      {% set is_active = idx == stage_index %}
+      <span class="badge rounded-pill
+        {{ 'bg-success' if is_done else 'bg-primary' if is_active else 'bg-light text-dark border' }}">
+        {{ stage_labels.get(stage, stage|replace('_',' ')|title) }}
+      </span>
+      {% endfor %}
+    </div>
+
+    {% if candidate.stage_reason %}
+    <div class="mt-3 small text-muted">
+      <strong>Reason:</strong> {{ candidate.stage_reason }}
+    </div>
+    {% endif %}
+
+    {% if current_user and current_user.role.value in ['admin','manager','recruiter'] %}
+    <form method="POST" action="/candidates/{{ candidate.id }}/stage" class="row g-2 align-items-end mt-3">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold mb-1">Update Stage</label>
+        <select name="stage" class="form-select form-select-sm" id="candidateStageSelect">
+          {% for stage in stage_order %}
+          <option value="{{ stage }}" {% if stage == current_stage %}selected{% endif %}>
+            {{ stage_labels.get(stage, stage|replace('_',' ')|title) }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-5" id="stageReasonWrap" style="display:none;">
+        <label class="form-label small fw-semibold mb-1">Reason (required for rejected)</label>
+        <input type="text" name="reason" class="form-control form-control-sm" placeholder="Reason" />
+      </div>
+      <div class="col-md-3">
+        <button type="submit" class="btn btn-outline-primary btn-sm w-100">Save Stage</button>
+      </div>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-12">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-id-card text-warning me-2"></i>Basic Information
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="text-muted small">Full Name</div>
+            <div class="fw-semibold">{{ candidate.full_name }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Phone</div>
+              <div class="fw-semibold">
+                {% if current_user and current_user.role.value in ['manager','recruiter','field_agent'] and not can_view_phone %}
+                <span class="js-phone-value" data-mask="{{ mask_phone(candidate.phone) }}">{{ mask_phone(candidate.phone) }}</span>
+                      <button type="button" class="btn btn-outline-secondary btn-sm ms-2 js-reveal-phone"
+                        data-candidate-id="{{ candidate.id }}">View 10s</button>
+                {% else %}
+                {{ candidate.phone }}
+                {% endif %}
+              </div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Email</div>
+            <div class="fw-semibold">{{ candidate.email or '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Institution</div>
+            <div class="fw-semibold">{{ candidate.institution_name or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Age</div>
+            <div class="fw-semibold">
+              {{ candidate.age or '-' }}
+              {% if candidate.age is not none and candidate.age < 18 %}
+              <span class="badge bg-warning text-dark ms-2">Minor</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Date of Birth</div>
+            <div class="fw-semibold">{{ candidate.date_of_birth.strftime('%d %b %Y') if candidate.date_of_birth else '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Gender</div>
+            <div class="fw-semibold">{{ candidate.gender or '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-fingerprint text-warning me-2"></i>Aadhaar Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="text-muted small">Aadhaar Number</div>
+            <div class="fw-semibold">{{ candidate.aadhaar_number or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Document</div>
+            {% if candidate.aadhaar_doc_path %}
+            <div class="fw-semibold"><a href="{{ candidate.aadhaar_doc_path }}" target="_blank">View attachment</a></div>
+            {% else %}
+            <div class="fw-semibold">-</div>
+            {% endif %}
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">OCR Status</div>
+            <div class="fw-semibold">
+              {{ candidate.aadhaar_ocr_status | title if candidate.aadhaar_ocr_status else '-' }}
+              {% if candidate.aadhaar_ocr_status == 'verified' %}
+              <span class="badge bg-success ms-2"><i class="fas fa-check-circle me-1"></i>Verified</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">OCR Name</div>
+            <div class="fw-semibold">{{ candidate.aadhaar_ocr_name or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">OCR DOB</div>
+            <div class="fw-semibold">{{ candidate.aadhaar_ocr_dob or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">OCR Number</div>
+            <div class="fw-semibold">{{ candidate.aadhaar_ocr_number or '-' }}</div>
+          </div>
+          {% if candidate.aadhaar_ocr_notes %}
+          <div class="col-12">
+            <div class="text-muted small">OCR Notes</div>
+            <div class="fw-semibold">{{ candidate.aadhaar_ocr_notes }}</div>
+          </div>
+          {% endif %}
+          {% if candidate.aadhaar_doc_path %}
+          <div class="col-12">
+            <form method="POST" action="/candidates/{{ candidate.id }}/aadhaar-ocr">
+              <button type="submit" class="btn btn-outline-secondary btn-sm">Re-run OCR</button>
+            </form>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    {% if current_stage == 'document_collection' %}
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-folder-open text-warning me-2"></i>Education & KYC Documents
+      </div>
+      <div class="card-body">
+        <form method="POST" action="/candidates/{{ candidate.id }}/documents" enctype="multipart/form-data">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold mb-1">Education Certificate</label>
+              <input type="file" name="education_doc" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" multiple />
+              {% if education_docs %}
+              <div class="small mt-2">
+                {% for path in education_docs %}
+                <div><a href="{{ path }}" target="_blank">View attachment {{ loop.index }}</a></div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="small text-muted mt-2">No documents uploaded</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold mb-1">Bank Account Document</label>
+              <input type="file" name="bank_doc" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" multiple />
+              {% if bank_docs %}
+              <div class="small mt-2">
+                {% for path in bank_docs %}
+                <div><a href="{{ path }}" target="_blank">View attachment {{ loop.index }}</a></div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="small text-muted mt-2">No documents uploaded</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold mb-1">Resume</label>
+              <input type="file" name="resume_doc" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png" multiple />
+              {% if resume_docs %}
+              <div class="small mt-2">
+                {% for path in resume_docs %}
+                <div><a href="{{ path }}" target="_blank">View attachment {{ loop.index }}</a></div>
+                {% endfor %}
+              </div>
+              {% else %}
+              <div class="small text-muted mt-2">No documents uploaded</div>
+              {% endif %}
+            </div>
+            <div class="col-md-4">
+              <label class="form-label small fw-semibold mb-1">Aadhaar Document</label>
+              <input type="file" name="aadhaar_doc" class="form-control form-control-sm" accept=".jpg,.jpeg,.png" />
+              {% if candidate.aadhaar_doc_path %}
+              <div class="small mt-2"><a href="{{ candidate.aadhaar_doc_path }}" target="_blank">View attachment</a></div>
+              {% else %}
+              <div class="small text-muted mt-2">No document uploaded</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="mt-3">
+            <button type="submit" class="btn btn-outline-primary btn-sm">Upload Documents</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-map-marker-alt text-warning me-2"></i>Location Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="text-muted small">Location / Area</div>
+            <div class="fw-semibold">{{ candidate.location or '-' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">City</div>
+            <div class="fw-semibold">{{ candidate.city or '-' }}</div>
+          </div>
+          <div class="col-md-3">
+            <div class="text-muted small">State</div>
+            <div class="fw-semibold">{{ candidate.state or '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-briefcase text-warning me-2"></i>Professional Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="text-muted small">Qualification</div>
+            <div class="fw-semibold">{{ candidate.qualification or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Experience (Years)</div>
+            <div class="fw-semibold">{{ candidate.experience_years or 0 }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Preferred Job Type</div>
+            <div class="fw-semibold">{{ candidate.preferred_job_type or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Expected Salary</div>
+            <div class="fw-semibold">{{ candidate.expected_salary or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Passing Out Year</div>
+            <div class="fw-semibold">{{ candidate.passing_out_year or '-' }}</div>
+          </div>
+          <div class="col-12">
+            <div class="text-muted small">Skills</div>
+            <div class="fw-semibold">{{ candidate.skills or '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-info-circle text-warning me-2"></i>Source & Notes
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="text-muted small">Source</div>
+            <div class="fw-semibold">{{ candidate.source.name if candidate.source else '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Status</div>
+            <div class="fw-semibold">{{ candidate.status.value | title }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Registered</div>
+            <div class="fw-semibold">{{ candidate.registered_at.strftime('%d %b %Y') }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Layam Registered</div>
+            <div class="fw-semibold">{{ 'Yes' if candidate.registered_with_layam else 'No' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Employed</div>
+            <div class="fw-semibold">{{ 'Yes' if candidate.employed else 'No' }}</div>
+          </div>
+          <div class="col-12">
+            <div class="text-muted small">Notes</div>
+            <div class="fw-semibold">{{ candidate.notes or '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if round_one_responses or round_one_custom_responses %}
+    <div class="card border-0 shadow-sm mt-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-clipboard-check text-warning me-2"></i>Initial Screening Responses
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          {% for item in round_one_responses %}
+          <div class="col-12">
+            <div class="text-muted small">{{ loop.index }}. {{ item.question_text }}</div>
+            <div class="fw-semibold">{{ item.response_text or '—' }}</div>
+          </div>
+          {% endfor %}
+          {% if round_one_custom_responses %}
+          <div class="col-12">
+            <div class="text-muted small">Additional Questions</div>
+          </div>
+          {% for item in round_one_custom_responses %}
+          <div class="col-12">
+            <div class="text-muted small">{{ item.question_text }}</div>
+            <div class="fw-semibold">{{ item.response_text or '—' }}</div>
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<div id="candidatePhoneContext" data-candidate-id="{{ candidate.id }}"></div>
+
+<script>
+  function promptReason(form, message) {
+    const reason = window.prompt(message);
+    if (reason === null) {
+      return false;
+    }
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      window.alert("Reason is required.");
+      return false;
+    }
+    const input = form.querySelector('input[name="reason"]');
+    if (input) {
+      input.value = trimmed;
+    }
+    return true;
+  }
+
+  const stageSelect = document.getElementById("candidateStageSelect");
+  const reasonWrap = document.getElementById("stageReasonWrap");
+  if (stageSelect && reasonWrap) {
+    const toggleReason = () => {
+      const val = (stageSelect.value || "").toLowerCase();
+      const requires = val === "rejected";
+      reasonWrap.style.display = requires ? "block" : "none";
+      const input = reasonWrap.querySelector("input[name='reason']");
+      if (input) {
+        input.required = requires;
+      }
+    };
+    stageSelect.addEventListener("change", toggleReason);
+    toggleReason();
+  }
+</script>
+{% endblock %}

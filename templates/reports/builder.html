@@ -1,0 +1,287 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-sliders text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">Build filters, choose fields, and share reports.</small>
+  </div>
+  <a href="/reports" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left me-1"></i>Back to Reports
+  </a>
+</div>
+
+<form method="POST" action="{{ form_action or (report and '/reports/' ~ report.id ~ '/edit') or '/reports/new' }}" novalidate>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-file-alt text-warning me-2"></i>Report Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Report Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control" required
+                   value="{{ report.name if report else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Base Table <span class="text-danger">*</span></label>
+            <select name="base_table" class="form-select" id="reportBaseTable" required>
+              <option value="">— Select —</option>
+              {% for key, info in table_meta.items() %}
+              <option value="{{ key }}" {% if report and report.base_table == key %}selected{% endif %}>{{ info.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Description</label>
+            <textarea name="description" class="form-control" rows="2">{{ report.description if report else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-columns text-warning me-2"></i>Fields & Filters
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Select Fields</label>
+          <select name="columns" class="form-select" id="reportColumns" multiple>
+          </select>
+          <div class="form-text">Leave blank to include all columns.</div>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <label class="form-label fw-semibold mb-0">Filters</label>
+          <button type="button" class="btn btn-outline-secondary btn-sm" id="addFilterBtn">
+            <i class="fas fa-plus me-1"></i>Add Filter
+          </button>
+        </div>
+        <div id="filtersContainer"></div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-chart-line text-warning me-2"></i>Visualization & Timeframe
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">View Mode</label>
+            <select name="view_mode" class="form-select">
+              {% set mode = report.view_mode if report else 'both' %}
+              <option value="both" {% if mode == 'both' %}selected{% endif %}>Table + Chart</option>
+              <option value="table" {% if mode == 'table' %}selected{% endif %}>Table Only</option>
+              <option value="chart" {% if mode == 'chart' %}selected{% endif %}>Chart Only</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Chart Type</label>
+            <select name="chart_type" class="form-select" id="chartType">
+              {% set chart_type = report.chart_type if report else '' %}
+              <option value="">— None —</option>
+              <option value="line" {% if chart_type == 'line' %}selected{% endif %}>Line</option>
+              <option value="bar" {% if chart_type == 'bar' %}selected{% endif %}>Bar</option>
+              <option value="pie" {% if chart_type == 'pie' %}selected{% endif %}>Pie</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Chart Group By</label>
+            <select name="chart_x" class="form-select" id="chartX"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Time Field</label>
+            <select name="time_field" class="form-select" id="timeField"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Time Range</label>
+            {% set time_range = report.time_range if report else '' %}
+            <select name="time_range" class="form-select">
+              <option value="">— None —</option>
+              <option value="last_7" {% if time_range == 'last_7' %}selected{% endif %}>Last 7 days</option>
+              <option value="last_30" {% if time_range == 'last_30' %}selected{% endif %}>Last 30 days</option>
+              <option value="last_90" {% if time_range == 'last_90' %}selected{% endif %}>Last 90 days</option>
+              <option value="mtd" {% if time_range == 'mtd' %}selected{% endif %}>Month to date</option>
+              <option value="ytd" {% if time_range == 'ytd' %}selected{% endif %}>Year to date</option>
+              <option value="custom" {% if time_range == 'custom' %}selected{% endif %}>Custom</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">From</label>
+            <input type="date" name="time_from" class="form-control"
+                   value="{{ report.time_from.date().isoformat() if report and report.time_from else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">To</label>
+            <input type="date" name="time_to" class="form-control"
+                   value="{{ report.time_to.date().isoformat() if report and report.time_to else '' }}" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    {% if can_share %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-share-alt text-warning me-2"></i>Share Report
+      </div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Save as Template</label>
+          <div class="form-check">
+            <input class="form-check-input" type="checkbox" name="is_template" value="1"
+                   id="reportIsTemplate" {% if report and report.is_template %}checked{% endif %}>
+            <label class="form-check-label" for="reportIsTemplate">
+              Make this report a reusable template
+            </label>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Share with Roles</label>
+          <select name="share_roles" class="form-select" multiple>
+            {% for r in roles %}
+            <option value="{{ r.value }}" {% if share_roles and (r.value in share_roles) %}selected{% endif %}>{{ r.value.replace('_',' ').title() }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="form-label fw-semibold">Share with Users</label>
+          <select name="share_users" class="form-select" multiple>
+            {% for u in users %}
+            <option value="{{ u.id }}" {% if share_users and (u.id in share_users) %}selected{% endif %}>{{ u.full_name }} ({{ u.role.value.replace('_',' ') }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="d-grid gap-2">
+      <button type="submit" class="btn btn-warning fw-bold">
+        <i class="fas fa-save me-2"></i>{{ 'Save Changes' if report else 'Create Report' }}
+      </button>
+      <a href="/reports" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </div>
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const TABLE_META = {{ table_meta | tojson }};
+  const REPORT_DATA = {{ report_payload | tojson if report_payload else 'null' }};
+  const OP_OPTIONS = {{ operator_options | tojson }};
+
+  function buildOptions(select, fields, selectedValues) {
+    select.innerHTML = "";
+    fields.forEach(field => {
+      const option = document.createElement("option");
+      option.value = field.name;
+      option.textContent = field.label;
+      if (selectedValues && selectedValues.includes(field.name)) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+  }
+
+  function buildFilterRow(fieldList, values = {}) {
+    const row = document.createElement("div");
+    row.className = "row g-2 align-items-end mb-2";
+
+    const fieldCol = document.createElement("div");
+    fieldCol.className = "col-md-4";
+    const fieldSelect = document.createElement("select");
+    fieldSelect.className = "form-select";
+    fieldSelect.name = "filter_field";
+    buildOptions(fieldSelect, fieldList, values.field ? [values.field] : []);
+    fieldCol.appendChild(fieldSelect);
+
+    const opCol = document.createElement("div");
+    opCol.className = "col-md-3";
+    const opSelect = document.createElement("select");
+    opSelect.className = "form-select";
+    opSelect.name = "filter_operator";
+    OP_OPTIONS.forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (values.operator === value) {
+        option.selected = true;
+      }
+      opSelect.appendChild(option);
+    });
+    opCol.appendChild(opSelect);
+
+    const valueCol = document.createElement("div");
+    valueCol.className = "col-md-3";
+    const valueInput = document.createElement("input");
+    valueInput.className = "form-control";
+    valueInput.name = "filter_value";
+    valueInput.value = values.value || "";
+    valueCol.appendChild(valueInput);
+
+    const valueToCol = document.createElement("div");
+    valueToCol.className = "col-md-2";
+    const valueToInput = document.createElement("input");
+    valueToInput.className = "form-control";
+    valueToInput.name = "filter_value_to";
+    valueToInput.value = values.value_to || "";
+    valueToCol.appendChild(valueToInput);
+
+    row.appendChild(fieldCol);
+    row.appendChild(opCol);
+    row.appendChild(valueCol);
+    row.appendChild(valueToCol);
+
+    return row;
+  }
+
+  function loadTableMeta(tableKey) {
+    const meta = TABLE_META[tableKey];
+    if (!meta) return;
+    const fields = meta.fields || [];
+
+    buildOptions(document.getElementById("reportColumns"), fields, REPORT_DATA ? REPORT_DATA.selected_columns : []);
+    buildOptions(document.getElementById("chartX"), fields, REPORT_DATA && REPORT_DATA.chart_x ? [REPORT_DATA.chart_x] : []);
+    buildOptions(document.getElementById("timeField"), fields, REPORT_DATA && REPORT_DATA.time_field ? [REPORT_DATA.time_field] : []);
+
+    const container = document.getElementById("filtersContainer");
+    container.innerHTML = "";
+    const filters = REPORT_DATA ? REPORT_DATA.filters : [];
+    if (filters.length) {
+      filters.forEach(filter => {
+        container.appendChild(buildFilterRow(fields, filter));
+      });
+    } else {
+      container.appendChild(buildFilterRow(fields));
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const baseSelect = document.getElementById("reportBaseTable");
+    const addFilterBtn = document.getElementById("addFilterBtn");
+    if (!baseSelect) return;
+
+    baseSelect.addEventListener("change", function () {
+      loadTableMeta(baseSelect.value);
+    });
+
+    if (baseSelect.value) {
+      loadTableMeta(baseSelect.value);
+    }
+
+    addFilterBtn.addEventListener("click", function () {
+      const fields = TABLE_META[baseSelect.value]?.fields || [];
+      document.getElementById("filtersContainer").appendChild(buildFilterRow(fields));
+    });
+  });
+</script>
+{% endblock %}

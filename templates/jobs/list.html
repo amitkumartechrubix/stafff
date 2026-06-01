@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Job Postings{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-briefcase text-warning me-2"></i>
+      {% if view_mode == 'status' %}
+      Job Posting Statuses
+      {% elif status_filter == 'active' %}
+      Current Open Positions
+      {% else %}
+      Job Postings
+      {% endif %}
+    </h4>
+    <small class="text-muted">{{ total }} job{{ 's' if total != 1 else '' }} found</small>
+  </div>
+  <a href="/jobs/new" class="btn btn-warning fw-semibold">
+    <i class="fas fa-plus me-2"></i>Create Job
+  </a>
+</div>
+
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form method="GET" action="/jobs" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+             <input type="text" name="search" class="form-control" placeholder="Company, designation, location…"
+                 value="{{ search }}" />
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% set status_labels = {
+            'pending_approval': 'Pending Approval',
+            'active': 'Active',
+            'closed': 'Closed'
+          } %}
+          {% for s in ['pending_approval','active','closed'] %}
+          <option value="{{ s }}" {% if status_filter == s %}selected{% endif %}>{{ status_labels[s] }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="/jobs" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Company</th>
+            <th>Location</th>
+            <th>Designation</th>
+            <th>Experience</th>
+            <th>Vacancies</th>
+            <th>Status</th>
+            {% if current_user and current_user.role.value in ['manager','recruiter'] %}
+            <th>Approval Status</th>
+            {% endif %}
+            {% if current_user and current_user.role.value in ['manager','admin'] %}
+            <th>Assigned Recruiter</th>
+            {% endif %}
+            <th>Active</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for j in jobs %}
+          <tr class="js-row-link" data-href="/jobs/{{ j.id }}">
+            <td class="fw-semibold">
+              {{ j.company.name if j.company else (j.company_name or j.title or '—') }}
+            </td>
+            <td class="small text-muted">{{ j.location or '—' }}</td>
+            <td class="small text-muted">{{ j.designation or j.role_title or '—' }}</td>
+            <td class="small text-muted">{{ j.min_experience or 0 }} - {{ j.max_experience or 'Any' }} yrs</td>
+            <td class="small text-muted">{{ j.openings or 0 }}</td>
+            <td>
+              {% if view_mode == 'status' %}
+                {% set stats = job_stats.get(j.id) if job_stats else None %}
+                {% if stats %}
+                <div class="small text-muted">Shortlisted: {{ stats.shortlisted }}</div>
+                <div class="small text-muted">Placed: {{ stats.placed }} / {{ stats.openings or '-' }} ({{ stats.percent }}%)</div>
+                {% else %}
+                <span class="badge bg-info text-dark">{{ j.status | title }}</span>
+                {% endif %}
+              {% else %}
+              <span class="badge bg-info text-dark">{{ j.status | title }}</span>
+              {% endif %}
+            </td>
+            {% if current_user and current_user.role.value in ['manager','recruiter'] %}
+            <td>
+              {% set approval_label = {
+                'pending': 'Pending',
+                'approved': 'Approved',
+                'cancelled': 'Cancelled'
+              }.get(j.approval_status, (j.approval_status or 'Pending') | title) %}
+              <span class="badge bg-warning text-dark" {% if j.approval_status == 'approved' %}style="background:#d1e7dd; color:#0f5132;"{% elif j.approval_status == 'cancelled' %}style="background:#f8d7da; color:#842029;"{% endif %}>
+                {{ approval_label }}
+              </span>
+            </td>
+            {% endif %}
+            {% if current_user and current_user.role.value in ['manager','admin'] %}
+            <td class="small text-muted">{{ j.assigned_recruiter.full_name if j.assigned_recruiter else '—' }}</td>
+            {% endif %}
+            <td>
+              <span class="badge {{ 'bg-success' if j.is_active else 'bg-secondary' }}">
+                {{ 'Active' if j.is_active else 'Inactive' }}
+              </span>
+            </td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                {% if current_user and current_user.role.value == 'recruiter' %}
+                <a href="/jobs/{{ j.id }}/staffing" target="_blank" rel="noopener" class="btn btn-outline-primary" title="Start Staffing">
+                  <i class="fas fa-play"></i>
+                </a>
+                {% endif %}
+                <a href="/jobs/{{ j.id }}/edit" class="btn btn-outline-primary" title="Edit">
+                  <i class="fas fa-edit"></i>
+                </a>
+                {% if current_user and current_user.role.value in ['manager','recruiter'] and j.approval_status == 'pending' %}
+                <form method="POST" action="/jobs/{{ j.id }}/approve">
+                  <button type="submit" class="btn btn-outline-success" title="Approve">
+                    <i class="fas fa-check me-1"></i>Approve
+                  </button>
+                </form>
+                {% endif %}
+                {% if current_user and current_user.role.value == 'manager' %}
+                <form method="POST" action="/jobs/{{ j.id }}/toggle">
+                  <button type="submit" class="btn {{ 'btn-outline-warning' if j.is_active else 'btn-outline-success' }}"
+                          title="{{ 'Deactivate' if j.is_active else 'Activate' }}">
+                    <i class="fas fa-{{ 'pause' if j.is_active else 'play' }}"></i>
+                  </button>
+                </form>
+                {% endif %}
+                {% if current_user and current_user.role.value in ['manager','employer'] and j.status != 'closed' %}
+                <form method="POST" action="/jobs/{{ j.id }}/close" onsubmit="return confirm('Close this job posting?')">
+                  <button type="submit" class="btn btn-outline-danger" title="Close">
+                    <i class="fas fa-ban"></i>
+                  </button>
+                </form>
+                {% endif %}
+                {% if not j.company_id %}
+                <a href="/register/company" class="btn btn-outline-secondary" title="Register Company">
+                  <i class="fas fa-building"></i>
+                </a>
+                {% endif %}
+                <form method="POST" action="/jobs/{{ j.id }}/delete" onsubmit="return confirm('Delete this job?')">
+                  <button type="submit" class="btn btn-outline-danger" title="Delete">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            {% if current_user and current_user.role.value == 'manager' %}
+            <td colspan="9" class="text-center text-muted py-4">No job postings yet.</td>
+            {% elif current_user and current_user.role.value == 'admin' %}
+            <td colspan="9" class="text-center text-muted py-4">No job postings yet.</td>
+            {% elif current_user and current_user.role.value == 'recruiter' %}
+            <td colspan="8" class="text-center text-muted py-4">No job postings yet.</td>
+            {% else %}
+            <td colspan="7" class="text-center text-muted py-4">No job postings yet.</td>
+            {% endif %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if total_pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination pagination-sm justify-content-center">
+    <li class="page-item {{ 'disabled' if page == 1 }}">
+      <a class="page-link" href="?page={{ page - 1 }}&search={{ search }}&status={{ status_filter }}">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="?page={{ p }}&search={{ search }}&status={{ status_filter }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if page == total_pages }}">
+      <a class="page-link" href="?page={{ page + 1 }}&search={{ search }}&status={{ status_filter }}">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

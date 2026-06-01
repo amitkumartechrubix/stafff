@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+{% block title %}User Management{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-users-cog text-warning me-2"></i>User Management</h4>
+    <small class="text-muted">{{ total }} user{{ 's' if total != 1 else '' }} found</small>
+  </div>
+  <a href="/admin/users/new" class="btn btn-warning fw-semibold">
+    <i class="fas fa-user-plus me-2"></i>Add New User
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form method="GET" action="/admin/users" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <label class="form-label small fw-semibold mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="text" name="search" class="form-control" placeholder="Name, email, username…"
+                 value="{{ search }}" />
+        </div>
+      </div>
+      <div class="col-md-3">
+        <label class="form-label small fw-semibold mb-1">Role</label>
+        <select name="role" class="form-select form-select-sm">
+          <option value="">All Roles</option>
+          {% for r in roles %}
+          <option value="{{ r.value }}" {% if role_filter == r.value %}selected{% endif %}>
+            {{ r.value.replace('_',' ').title() }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="/admin/users" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>User</th>
+            <th>Role / Username</th>
+            <th>License / Password</th>
+            <th>Employee ID</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Joined</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for u in users %}
+          <tr class="js-row-link" data-href="/admin/users/{{ u.id }}">
+            <td class="text-muted small">{{ u.id }}</td>
+            <td>
+              <div class="d-flex align-items-center gap-2">
+                <div class="si-table-avatar">{{ u.initials }}</div>
+                <div>
+                  <div class="fw-semibold">{{ u.full_name }}</div>
+                  <small class="text-muted">{{ u.email }}</small>
+                </div>
+              </div>
+            </td>
+            <td>
+              <span class="badge si-role-badge-{{ u.role.value }}">
+                {{ 'Institution User' if u.role.value == 'institution' else 'Employer' if u.role.value == 'employer' else u.role_display }}
+              </span>
+              <div class="small text-muted">{{ u.username }}</div>
+            </td>
+            <td>
+              <span class="badge {{ 'bg-warning text-dark' if u.license_type.value == 'enterprise' else 'bg-info text-dark' if u.license_type.value == 'professional' else 'bg-light text-dark border' }}">
+                {{ u.license_type.value | title }}
+              </span>
+              <div class="small text-muted">{{ u.seed_password or '—' }}</div>
+            </td>
+            <td class="text-muted small">{{ u.employee_id or '—' }}</td>
+            <td class="small">{{ u.phone or '—' }}</td>
+            <td>
+              {% if u.is_active %}
+              <span class="badge bg-success"><i class="fas fa-check me-1"></i>Active</span>
+              {% else %}
+              <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+            <td class="text-muted small">{{ u.created_at.strftime('%d %b %Y') }}</td>
+            <td class="text-center">
+              <div class="btn-group btn-group-sm">
+                <a href="/admin/users/{{ u.id }}/edit" class="btn btn-outline-primary" title="Edit">
+                  <i class="fas fa-edit"></i>
+                </a>
+                {% if u.id != current_user.id %}
+                <form method="POST" action="/admin/users/{{ u.id }}/toggle-status"
+                      onsubmit="return confirm('Toggle status for {{ u.full_name }}?')">
+                  <button type="submit"
+                          class="btn {{ 'btn-outline-danger' if u.is_active else 'btn-outline-success' }}"
+                          title="{{ 'Deactivate' if u.is_active else 'Activate' }}">
+                    <i class="fas {{ 'fa-user-slash' if u.is_active else 'fa-user-check' }}"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </div>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-muted">
+              <i class="fas fa-users-slash fa-3x mb-3 d-block text-light"></i>
+              No users found. <a href="/admin/users/new">Add the first user</a>.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination pagination-sm justify-content-center">
+    <li class="page-item {{ 'disabled' if page == 1 }}">
+      <a class="page-link" href="?page={{ page - 1 }}&search={{ search }}&role={{ role_filter }}">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="?page={{ p }}&search={{ search }}&role={{ role_filter }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if page == total_pages }}">
+      <a class="page-link" href="?page={{ page + 1 }}&search={{ search }}&role={{ role_filter }}">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}
+

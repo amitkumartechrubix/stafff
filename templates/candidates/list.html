@@ -1,0 +1,330 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-user-friends text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">{{ total }} candidate{{ 's' if total != 1 else '' }} found</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/candidates/bulk-upload" class="btn btn-outline-primary fw-semibold">
+      <i class="fas fa-file-upload me-2"></i>Bulk Upload
+    </a>
+    <a href="/candidates/new" class="btn btn-warning fw-semibold">
+      <i class="fas fa-user-plus me-2"></i>Register Candidate
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form method="GET" action="/candidates" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="text" name="search" class="form-control" placeholder="Name, phone, email…"
+                 value="{{ search }}" />
+        </div>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for s in statuses %}
+          <option value="{{ s.value }}" {% if status_filter == s.value %}selected{% endif %}>
+            {{ s.value | title }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">State</label>
+        <select name="state" class="form-select form-select-sm js-state-select" id="candidateFilterState"
+          data-selected="{{ state_filter }}"></select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">City</label>
+        <select name="city" class="form-select form-select-sm js-city-select" id="candidateFilterCity"
+          data-state-target="candidateFilterState"
+          data-selected="{{ city_filter }}"></select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="/candidates" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+      </div>
+      {% if current_user and current_user.role.value == 'manager' %}
+      <div class="col-12">
+        <div class="border-top mt-2 pt-3">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="fw-semibold">Advanced Filters</div>
+            <button type="button" class="btn btn-outline-secondary btn-sm" id="addCandidateFilter">
+              <i class="fas fa-plus me-1"></i>Add Filter
+            </button>
+          </div>
+          <div id="candidateFilters">
+            {% for fil in custom_filters %}
+            <div class="row g-2 align-items-end mb-2 candidate-filter-row">
+              <div class="col-md-4">
+                <select name="filter_field" class="form-select form-select-sm">
+                  {% for key, meta in filter_fields.items() %}
+                  <option value="{{ key }}" {% if fil.field == key %}selected{% endif %}>{{ meta.label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select name="filter_operator" class="form-select form-select-sm">
+                  {% for op, label in operator_options %}
+                  <option value="{{ op }}" {% if fil.operator == op %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <input type="text" name="filter_value" class="form-control form-control-sm" value="{{ fil.value }}" />
+              </div>
+              <div class="col-md-2">
+                <input type="text" name="filter_value_to" class="form-control form-control-sm" value="{{ fil.value_to }}" />
+              </div>
+            </div>
+            {% else %}
+            <div class="row g-2 align-items-end mb-2 candidate-filter-row">
+              <div class="col-md-4">
+                <select name="filter_field" class="form-select form-select-sm">
+                  {% for key, meta in filter_fields.items() %}
+                  <option value="{{ key }}">{{ meta.label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <select name="filter_operator" class="form-select form-select-sm">
+                  {% for op, label in operator_options %}
+                  <option value="{{ op }}">{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-md-3">
+                <input type="text" name="filter_value" class="form-control form-control-sm" />
+              </div>
+              <div class="col-md-2">
+                <input type="text" name="filter_value_to" class="form-control form-control-sm" />
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </form>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    {% if current_user and current_user.role.value in ['manager','admin'] %}
+    <form method="POST" action="/candidates/assign">
+      <div class="d-flex flex-wrap gap-2 align-items-center p-3 border-bottom">
+        <div class="fw-semibold">Assign selected</div>
+        <select name="assigned_recruiter_id" class="form-select form-select-sm" style="max-width: 220px;">
+          <option value="">— Unassigned —</option>
+          {% for r in recruiters %}
+          <option value="{{ r.id }}">{{ r.full_name }}</option>
+          {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">
+          <i class="fas fa-user-check me-1"></i>Assign
+        </button>
+      </div>
+    {% endif %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-dark">
+            <tr>
+              {% if current_user and current_user.role.value in ['manager','admin'] %}
+              <th style="width: 40px;">
+                <input class="form-check-input" type="checkbox" id="selectAllCandidates" />
+              </th>
+              {% endif %}
+              <th>#</th>
+              <th>Name</th>
+              <th>Phone</th>
+              <th>Location</th>
+              <th>Qualification</th>
+              <th>Age</th>
+              <th>Source</th>
+              <th>Status</th>
+              {% if current_user and current_user.role.value in ['manager','admin'] %}
+              <th>Assigned</th>
+              {% endif %}
+              <th class="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in candidates %}
+            <tr class="js-row-link {{ 'table-warning' if c.age is not none and c.age < 18 else '' }}" data-href="/candidates/{{ c.id }}">
+              {% if current_user and current_user.role.value in ['manager','admin'] %}
+              <td>
+                <input class="form-check-input candidate-select" type="checkbox" name="candidate_ids" value="{{ c.id }}" />
+              </td>
+              {% endif %}
+              <td class="text-muted small">{{ c.id }}</td>
+              <td>
+                <div class="fw-semibold">
+                  {{ c.full_name }}
+                  {% if c.aadhaar_ocr_status == 'verified' %}
+                  <i class="fas fa-check-circle text-success ms-1" title="Aadhaar verified"></i>
+                  {% endif %}
+                </div>
+                <small class="text-muted">{{ c.email or '' }}</small>
+              </td>
+              <td>
+                {% if current_user and current_user.role.value in ['manager','recruiter','field_agent'] and not can_view_phone %}
+                <span class="js-phone-value" data-mask="{{ mask_phone(c.phone) }}">{{ mask_phone(c.phone) }}</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm ms-2 js-reveal-phone"
+                  data-candidate-id="{{ c.id }}">View 10s</button>
+                {% else %}
+                {{ c.phone }}
+                {% endif %}
+              </td>
+              <td class="small">{{ (c.city or '') + (', ' + c.state if c.state else '') or '—' }}</td>
+              <td class="small">{{ c.qualification or '—' }}</td>
+              <td class="small">
+                {{ c.age or '—' }}
+                {% if c.age is not none and c.age < 18 %}
+                <span class="badge bg-warning text-dark ms-1">Minor</span>
+                {% endif %}
+              </td>
+              <td class="small">{{ c.source.name if c.source else '—' }}</td>
+              <td>
+                <span class="badge
+                  {{ 'bg-success' if c.status.value == 'active' else
+                     'bg-primary' if c.status.value == 'placed' else
+                     'bg-danger' if c.status.value == 'blacklisted' else
+                     'bg-secondary' }}">
+                  {{ c.status.value | title }}
+                </span>
+                {% set stage = stage_map.get(c.id) if stage_map else None %}
+                {% if stage %}
+                <span class="badge bg-info text-dark ms-1">{{ stage_labels.get(stage, stage|replace('_',' ')|title) }}</span>
+                {% endif %}
+              </td>
+              {% if current_user and current_user.role.value in ['manager','admin'] %}
+              <td class="small">{{ c.assigned_recruiter.full_name if c.assigned_recruiter else '—' }}</td>
+              {% endif %}
+              <td class="text-center">
+                <a href="/candidates/{{ c.id }}/edit" class="btn btn-outline-primary btn-sm" title="Edit">
+                  <i class="fas fa-edit"></i>
+                </a>
+                {% if current_user and current_user.role.value == 'recruiter' and round_one_completed_ids and c.id in round_one_completed_ids %}
+                <form method="POST" action="/candidates/{{ c.id }}/round-1/status" class="d-inline">
+                  <input type="hidden" name="decision" value="shortlisted" />
+                  <button type="submit" class="btn btn-success btn-sm" title="Shortlist" aria-label="Shortlist">
+                    <i class="fas fa-check"></i>
+                  </button>
+                </form>
+                <form method="POST" action="/candidates/{{ c.id }}/round-1/status" class="d-inline"
+                      onsubmit="return promptReason(this, 'Enter reason for rejecting this candidate.');">
+                  <input type="hidden" name="decision" value="not_shortlisted" />
+                  <input type="hidden" name="reason" value="" />
+                  <button type="submit" class="btn btn-outline-danger btn-sm" title="Reject" aria-label="Reject">
+                    <i class="fas fa-times"></i>
+                  </button>
+                </form>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              {% if current_user and current_user.role.value in ['manager','admin'] %}
+              <td colspan="11" class="text-center py-5 text-muted">
+              {% else %}
+              <td colspan="9" class="text-center py-5 text-muted">
+              {% endif %}
+                <i class="fas fa-user-slash fa-3x mb-3 d-block text-light"></i>
+                No candidates found.
+                <a href="/candidates/new">Register the first candidate</a>.
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% if current_user and current_user.role.value in ['manager','admin'] %}
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination pagination-sm justify-content-center">
+    <li class="page-item {{ 'disabled' if page == 1 }}">
+      <a class="page-link" href="?page={{ page-1 }}&search={{ search }}&status={{ status_filter }}&state={{ state_filter }}&city={{ city_filter }}">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="?page={{ p }}&search={{ search }}&status={{ status_filter }}&state={{ state_filter }}&city={{ city_filter }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if page == total_pages }}">
+      <a class="page-link" href="?page={{ page+1 }}&search={{ search }}&status={{ status_filter }}&state={{ state_filter }}&city={{ city_filter }}">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function promptReason(form, message) {
+    const reason = window.prompt(message);
+    if (reason === null) {
+      return false;
+    }
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      window.alert("Reason is required.");
+      return false;
+    }
+    const input = form.querySelector('input[name="reason"]');
+    if (input) {
+      input.value = trimmed;
+    }
+    return true;
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    const selectAll = document.getElementById("selectAllCandidates");
+    if (!selectAll) return;
+    selectAll.addEventListener("change", function () {
+      document.querySelectorAll(".candidate-select").forEach((box) => {
+        box.checked = selectAll.checked;
+      });
+    });
+
+    const addFilter = document.getElementById("addCandidateFilter");
+    if (addFilter) {
+      addFilter.addEventListener("click", function () {
+        const container = document.getElementById("candidateFilters");
+        const template = container.querySelector(".candidate-filter-row");
+        if (!template) return;
+        const clone = template.cloneNode(true);
+        clone.querySelectorAll("input").forEach((input) => {
+          input.value = "";
+        });
+        clone.querySelectorAll("select").forEach((select) => {
+          select.selectedIndex = 0;
+        });
+        container.appendChild(clone);
+      });
+    }
+  });
+</script>
+{% endblock %}

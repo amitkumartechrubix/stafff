@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-user-plus text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">Submit your details to register.</small>
+  </div>
+</div>
+
+<form method="POST" action="{{ form_action }}" novalidate>
+<input type="hidden" name="ref" value="{{ ref or '' }}" />
+<input type="hidden" name="setup_type" value="{{ setup_type or '' }}" />
+<input type="hidden" name="setup_location" value="{{ setup_location or '' }}" />
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-id-card text-warning me-2"></i>Basic Information
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+            <input type="text" name="full_name" class="form-control" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+            <input type="tel" name="phone" class="form-control" placeholder="+91 XXXXX XXXXX" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Email ID</label>
+            <input type="email" name="email" class="form-control" placeholder="candidate@email.com" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Date of Birth</label>
+            <input type="date" name="date_of_birth" class="form-control" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Gender</label>
+            <select name="gender" class="form-select">
+              <option value="">- Select -</option>
+              <option>Male</option>
+              <option>Female</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-map-marker-alt text-warning me-2"></i>Location Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">Location / Area</label>
+                 <input type="text" name="location" class="form-control" placeholder="Dharavi, Mumbai"
+                   value="{{ setup_location or '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">City</label>
+            <select name="city" class="form-select js-city-select" id="publicCity" data-state-target="publicState"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">State</label>
+            <select name="state" class="form-select js-state-select" id="publicState"></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-briefcase text-warning me-2"></i>Professional Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Qualification</label>
+            <select name="qualification" class="form-select">
+              <option value="">- Select -</option>
+              {% set quals = ['Below 10th','10th Pass','12th Pass','ITI','Diploma','Graduate','Post Graduate','Other'] %}
+              {% for q in quals %}
+              <option>{{ q }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Experience (Years)</label>
+            <input type="number" name="experience_years" class="form-control" min="0" placeholder="0" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Preferred Job Type</label>
+            <select name="preferred_job_type" class="form-select">
+              <option value="">- Select -</option>
+              {% for jt in ['Construction','Manufacturing','Logistics','Security','Cleaning','Plumbing','Electrical','Welding','Carpentry','Driving','Retail','Other'] %}
+              <option>{{ jt }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Expected Salary (INR/month)</label>
+            <input type="text" name="expected_salary" class="form-control" placeholder="15000" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Passing Out Year</label>
+            <input type="number" name="passing_out_year" class="form-control" min="1900" max="2100" />
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Skills</label>
+            <textarea name="skills" class="form-control" rows="2" placeholder="e.g. Welding, Plumbing"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-info-circle text-warning me-2"></i>Notes
+      </div>
+      <div class="card-body">
+        {% if setup_type %}
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Source</label>
+          <input type="text" class="form-control" value="Field Representative - {{ setup_type }}" readonly />
+          <div class="form-text">Source is auto-set from the field agent link.</div>
+        </div>
+        {% endif %}
+        <textarea name="notes" class="form-control" rows="3" placeholder="Any additional notes..."></textarea>
+      </div>
+    </div>
+
+    <input type="hidden" name="source_id" value="{{ default_source_id or '' }}" />
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body text-center py-4">
+        <div class="si-avatar-lg mx-auto mb-3">?</div>
+        <h6 class="fw-bold">Candidate Registration</h6>
+        <p class="text-muted small">Submit the form to register.</p>
+      </div>
+    </div>
+    <div class="d-grid gap-2">
+      <button type="submit" class="btn btn-warning fw-bold py-2">
+        <i class="fas fa-paper-plane me-2"></i>Submit Registration
+      </button>
+    </div>
+  </div>
+</div>
+</form>
+{% endblock %}

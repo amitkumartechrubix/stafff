@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <h4 class="fw-bold mb-0"><i class="fas fa-tachometer-alt text-warning me-2"></i>Employer Dashboard</h4>
+  <small class="text-muted">Welcome, {{ current_user.full_name }}!</small>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/jobs">
+      <div class="si-stat-card si-stat-blue">
+        <div class="si-stat-icon"><i class="fas fa-briefcase"></i></div>
+        <div class="si-stat-value">{{ job_total or 0 }}</div>
+        <div class="si-stat-label">Total Jobs</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/jobs?status=active">
+      <div class="si-stat-card si-stat-green">
+        <div class="si-stat-icon"><i class="fas fa-circle-check"></i></div>
+        <div class="si-stat-value">{{ job_active or 0 }}</div>
+        <div class="si-stat-label">Open Positions</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/jobs?status=pending_approval">
+      <div class="si-stat-card si-stat-yellow">
+        <div class="si-stat-icon"><i class="fas fa-pen-to-square"></i></div>
+        <div class="si-stat-value">{{ job_draft or 0 }}</div>
+        <div class="si-stat-label">Pending Approval</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/jobs?status=closed">
+      <div class="si-stat-card si-stat-red">
+        <div class="si-stat-icon"><i class="fas fa-circle-xmark"></i></div>
+        <div class="si-stat-value">{{ job_closed or 0 }}</div>
+        <div class="si-stat-label">Closed</div>
+      </div>
+    </a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-4">
+        <i class="fas fa-plus fa-3x text-warning mb-3"></i>
+        <h6 class="fw-bold">Post a Job</h6>
+        <p class="text-muted small">Create a new job posting for your organization.</p>
+        <a href="/jobs/new" class="btn btn-warning btn-sm fw-semibold">Post Job</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-4">
+        <i class="fas fa-briefcase fa-3x text-info mb-3"></i>
+        <h6 class="fw-bold">Current Open Positions</h6>
+        <p class="text-muted small">View and manage active job postings.</p>
+        <a href="/jobs?status=active" class="btn btn-info btn-sm fw-semibold text-white">View Open</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-4">
+        <i class="fas fa-chart-line fa-3x text-secondary mb-3"></i>
+        <h6 class="fw-bold">Job Status Reports</h6>
+        <p class="text-muted small">Review job posting performance and status.</p>
+        <a href="/reports" class="btn btn-secondary btn-sm fw-semibold">View Reports</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

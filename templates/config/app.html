@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}App Configuration{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h4 class="fw-bold mb-0"><i class="fas fa-sliders-h text-warning me-2"></i>{{ page_title or 'App Configuration' }}</h4>
+      <small class="text-muted">Manage application-level settings.</small>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="card-body">
+      <form method="POST" action="/config/app" novalidate>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Session Timeout (minutes)</label>
+            <input
+              type="number"
+              name="session_timeout_minutes"
+              class="form-control"
+              min="1"
+              step="1"
+              value="{{ config.session_timeout_minutes if config else 60 }}"
+              required
+            />
+            <div class="form-text">Users will be logged out after this period of inactivity.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Phone Visibility Exceptions</label>
+            <div class="row g-2">
+              <div class="col-5">
+                <div class="small text-muted mb-1">Available users</div>
+                <select class="form-select" id="phoneUsersAvailable" multiple size="8">
+                  {% for u in phone_view_users %}
+                  {% if u.id not in phone_view_selected %}
+                  <option value="{{ u.id }}">{{ u.full_name }} ({{ u.role.value.replace('_',' ') }})</option>
+                  {% endif %}
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-2 d-flex flex-column justify-content-center gap-2">
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="phoneUsersAdd">Add &raquo;</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="phoneUsersRemove">&laquo; Remove</button>
+              </div>
+              <div class="col-5">
+                <div class="small text-muted mb-1">Selected users</div>
+                <select name="phone_view_user_ids" class="form-select" id="phoneUsersSelected" multiple size="8">
+                  {% for u in phone_view_users %}
+                  {% if u.id in phone_view_selected %}
+                  <option value="{{ u.id }}">{{ u.full_name }} ({{ u.role.value.replace('_',' ') }})</option>
+                  {% endif %}
+                  {% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="form-text">Selected users can view and export phone numbers without masking.</div>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-warning fw-semibold" type="submit">
+            <i class="fas fa-save me-2"></i>Save Configuration
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (function () {
+    const available = document.getElementById("phoneUsersAvailable");
+    const selected = document.getElementById("phoneUsersSelected");
+    const addBtn = document.getElementById("phoneUsersAdd");
+    const removeBtn = document.getElementById("phoneUsersRemove");
+
+    if (!available || !selected || !addBtn || !removeBtn) {
+      return;
+    }
+
+    function moveOptions(source, target) {
+      const options = Array.from(source.options).filter((opt) => opt.selected);
+      options.forEach((opt) => {
+        opt.selected = false;
+        target.add(opt);
+      });
+    }
+
+    addBtn.addEventListener("click", function () {
+      moveOptions(available, selected);
+    });
+
+    removeBtn.addEventListener("click", function () {
+      moveOptions(selected, available);
+    });
+  })();
+</script>
+{% endblock %}

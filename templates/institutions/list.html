@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}Institutions{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-university text-warning me-2"></i>Institutions</h4>
+    <small class="text-muted">{{ total }} institution{{ 's' if total != 1 else '' }} found</small>
+  </div>
+  <a href="/institutions/new" class="btn btn-warning fw-semibold">
+    <i class="fas fa-plus me-2"></i>Add Institution
+  </a>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form method="GET" action="/institutions" class="row g-2 align-items-end">
+      <div class="col-md-5">
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="text" name="search" class="form-control" placeholder="Name, city, contact…"
+                 value="{{ search }}" />
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select name="verified" class="form-select form-select-sm">
+          <option value="">All Institutions</option>
+          <option value="1" {% if verified_filter == '1' %}selected{% endif %}>Verified Only</option>
+          <option value="0" {% if verified_filter == '0' %}selected{% endif %}>Pending Verification</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="/institutions" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Institution</th>
+            <th>Type</th>
+            <th>Location</th>
+            <th>Courses</th>
+            <th>Years</th>
+            <th>POC</th>
+            <th>Verified</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for inst in institutions %}
+          <tr class="js-row-link" data-href="/institutions/{{ inst.id }}">
+            <td class="text-muted small">{{ inst.id }}</td>
+            <td>
+              <div class="fw-semibold">{{ inst.name }}</div>
+              <small class="text-muted">{{ inst.affiliation or '' }}</small>
+            </td>
+            <td class="small">{{ inst.institution_type or '—' }}</td>
+            <td class="small">{{ (inst.city or '') + (', ' + inst.state if inst.state else '') or '—' }}</td>
+            <td class="small" style="max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"
+                title="{{ inst.courses_offered or '' }}">
+              {{ inst.courses_offered or '—' }}
+            </td>
+            <td class="small">{{ inst.years_of_operation or '—' }}</td>
+            <td class="small">
+              {{ inst.poc_name or '—' }}
+              {% if inst.poc_phone %}<br><small class="text-muted">{{ inst.poc_phone }}</small>{% endif %}
+            </td>
+            <td>
+              {% if inst.is_verified %}
+              <span class="badge bg-success"><i class="fas fa-check me-1"></i>Verified</span>
+              {% else %}
+              <span class="badge bg-warning text-dark">Pending</span>
+              {% endif %}
+            </td>
+            <td class="text-center">
+              <a href="/institutions/{{ inst.id }}/edit" class="btn btn-outline-primary btn-sm">
+                <i class="fas fa-edit"></i>
+              </a>
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="9" class="text-center py-5 text-muted">
+              <i class="fas fa-university fa-3x mb-3 d-block text-light"></i>
+              No institutions found. <a href="/institutions/new">Add one</a>.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% if total_pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination pagination-sm justify-content-center">
+    <li class="page-item {{ 'disabled' if page == 1 }}">
+      <a class="page-link" href="?page={{ page-1 }}&search={{ search }}&verified={{ verified_filter }}">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="?page={{ p }}&search={{ search }}&verified={{ verified_filter }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if page == total_pages }}">
+      <a class="page-link" href="?page={{ page+1 }}&search={{ search }}&verified={{ verified_filter }}">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,442 @@
+{% extends "base.html" %}
+{% block title %}Company Configuration{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-building text-warning me-2"></i>{{ page_title or 'Company Configuration' }}</h4>
+    <small class="text-muted">Configure your organisation's details.</small>
+  </div>
+  {% if back_url %}
+  <a href="{{ back_url }}" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left me-1"></i>Back to Companies
+  </a>
+  {% endif %}
+</div>
+
+<form method="POST" action="{{ form_action or '/config/company' }}" novalidate>
+<div class="row g-4">
+  <div class="col-lg-8">
+
+    <!-- Company Info -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-info-circle text-warning me-2"></i>Company Information
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Company Name <span class="text-danger">*</span></label>
+                 <input type="text" name="name" class="form-control" required id="companyName"
+                   value="{{ company.name if company else '' }}" placeholder="Acme Staffing Pvt. Ltd." />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Industry</label>
+            <select name="industry" class="form-select">
+              <option value="">— Select —</option>
+              {% for ind in ['Manufacturing - Automotive','Manufacturing - Auto Components','Manufacturing - Aerospace','Manufacturing - Defense','Manufacturing - Electronics','Manufacturing - Mobile Devices','Manufacturing - Semiconductors','Manufacturing - Electrical Equipment','Manufacturing - Industrial Machinery','Manufacturing - Heavy Engineering','Manufacturing - Steel & Metals','Manufacturing - Cement','Manufacturing - Chemicals','Manufacturing - Pharmaceuticals','Manufacturing - Medical Devices','Manufacturing - Plastic & Rubber','Manufacturing - Packaging','Manufacturing - Paper & Pulp','Manufacturing - Textile & Apparel','Manufacturing - Leather & Footwear','Manufacturing - Furniture','Manufacturing - Food & Beverage','Manufacturing - FMCG','Manufacturing - Consumer Durables','Manufacturing - Glass & Ceramics','Manufacturing - Shipbuilding','Manufacturing - Printing & Publishing','Manufacturing - Toys','Manufacturing - Solar & Renewable','Manufacturing - Battery & EV','Manufacturing - Telecom Equipment','Manufacturing - Railway Equipment','Manufacturing - Oil & Gas Equipment','Manufacturing - Construction Materials','Manufacturing - Smart Devices & IoT','Manufacturing - Robotics & Automation','Manufacturing - Precision Engineering','Manufacturing - Industrial Components','Manufacturing - HVAC & Refrigeration','Manufacturing - Agriculture Equipment','Manufacturing - Maritime Equipment','Manufacturing - Mining Equipment','Manufacturing - Power Equipment','Manufacturing - Energy Storage','Manufacturing - Medical Consumables','Manufacturing - Personal Care','Manufacturing - Home & Kitchen','Manufacturing - Sports Goods','Manufacturing - Stationery','Manufacturing - Sanitaryware','Manufacturing - Pipes & Fittings','Manufacturing - Paints & Coatings','Manufacturing - Glassware','Manufacturing - Ceramics & Tiles','Manufacturing - Wood & Plywood','Manufacturing - Hand Tools','Manufacturing - Fasteners','Manufacturing - Electrical Cables','Manufacturing - Pumps & Valves','Manufacturing - Elevators & Escalators','Manufacturing - Packaging Machinery','Manufacturing - Food Processing','Manufacturing - Beverage Processing','Construction','Real Estate & Infrastructure','Agriculture','Mining','Logistics & Warehousing','Transportation & Mobility','Hospitality','Travel & Tourism','Security Services','Facility Management','Healthcare Support','Healthcare Services','Retail','E-Commerce','Banking','Financial Services','Insurance','Telecom','IT Services','Software & SaaS','BPO & Shared Services','Education & Training','Media & Entertainment','Staffing & Recruitment','Government & Public Sector','Non-Profit','Other'] %}
+              <option {% if company and company.industry == ind %}selected{% endif %}>{{ ind }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Address</label>
+            <textarea name="address" class="form-control" rows="2"
+                      placeholder="Full postal address…">{{ company.address if company else '' }}</textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">City</label>
+            <select name="city" class="form-select js-city-select" id="companyCity"
+                    data-state-target="companyState"
+                    data-selected="{{ company.city if company else '' }}"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">State</label>
+            <select name="state" class="form-select js-state-select" id="companyState"
+                    data-selected="{{ company.state if company else '' }}"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">PIN Code</label>
+            <input type="text" name="pincode" class="form-control" maxlength="6"
+                   value="{{ company.pincode if company else '' }}" placeholder="400001" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Website</label>
+            <input type="url" name="website" class="form-control" id="companyWebsite"
+                   value="{{ company.website if company else '' }}" placeholder="https://company.com" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">GST Number</label>
+            <input type="text" name="gst_number" class="form-control" maxlength="15"
+                   value="{{ company.gst_number if company else '' }}" placeholder="22AAAAA0000A1Z5" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">CIN Number</label>
+            <input type="text" name="cin_number" class="form-control" maxlength="21"
+                   value="{{ company.cin_number if company else '' }}" placeholder="U12345MH2000PTC123456" />
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">About the Company</label>
+            <textarea name="description" class="form-control" rows="4" id="companyDescription"
+                      placeholder="Brief description of your company, services, and mission…">{{ company.description if company else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Company Locations -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold d-flex justify-content-between align-items-center">
+        <div><i class="fas fa-map-marker-alt text-warning me-2"></i>Company Locations</div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="addLocationBtn">
+          <i class="fas fa-plus me-1"></i>Add Location
+        </button>
+      </div>
+      <div class="card-body">
+        <div id="locationRows" class="d-grid gap-3">
+          {% if locations and locations|length %}
+          {% for loc in locations %}
+          <div class="row g-2 align-items-end js-location-row js-city-state-row">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">City</label>
+              <select name="location_city" class="form-select js-city-select"
+                      data-selected="{{ loc.city or '' }}"></select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">State</label>
+              <select name="location_state" class="form-select js-state-select"
+                      data-selected="{{ loc.state or '' }}"></select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">Complete Address</label>
+              <input type="text" name="location_address" class="form-control" value="{{ loc.address or '' }}" />
+            </div>
+            <div class="col-md-1 d-grid">
+              <button type="button" class="btn btn-outline-danger js-remove-location">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+          {% else %}
+          <div class="row g-2 align-items-end js-location-row js-city-state-row">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">City</label>
+              <select name="location_city" class="form-select js-city-select"></select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">State</label>
+              <select name="location_state" class="form-select js-state-select"></select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">Complete Address</label>
+              <input type="text" name="location_address" class="form-control" />
+            </div>
+            <div class="col-md-1 d-grid">
+              <button type="button" class="btn btn-outline-danger js-remove-location">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+        <template id="locationRowTemplate">
+          <div class="row g-2 align-items-end js-location-row js-city-state-row">
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">City</label>
+              <select name="location_city" class="form-select js-city-select"></select>
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">State</label>
+              <select name="location_state" class="form-select js-state-select"></select>
+            </div>
+            <div class="col-md-5">
+              <label class="form-label fw-semibold">Complete Address</label>
+              <input type="text" name="location_address" class="form-control" />
+            </div>
+            <div class="col-md-1 d-grid">
+              <button type="button" class="btn btn-outline-danger js-remove-location">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Technical Contact -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold d-flex justify-content-between align-items-center">
+        <div><i class="fas fa-laptop-code text-warning me-2"></i>Technical Contact</div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="addTechContactBtn">
+          <i class="fas fa-plus me-1"></i>Add Additional
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Primary Name</label>
+            <input type="text" name="technical_contact_name" class="form-control"
+                   value="{{ company.technical_contact_name if company else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Primary Email</label>
+            <input type="email" name="technical_contact_email" class="form-control"
+                   value="{{ company.technical_contact_email if company else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Primary Phone</label>
+            <input type="tel" name="technical_contact_phone" class="form-control"
+                   value="{{ company.technical_contact_phone if company else '' }}" placeholder="+91 98765 43210" />
+          </div>
+        </div>
+        <div id="techContactRows" class="d-grid gap-3">
+          {% if tech_contacts and tech_contacts|length %}
+          {% for contact in tech_contacts %}
+          <div class="row g-3 align-items-end js-tech-contact-row">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Name</label>
+              <input type="text" name="tech_contact_name" class="form-control" value="{{ contact.name or '' }}" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Email</label>
+              <input type="email" name="tech_contact_email" class="form-control" value="{{ contact.email or '' }}" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Phone</label>
+              <input type="tel" name="tech_contact_phone" class="form-control" value="{{ contact.phone or '' }}" />
+            </div>
+            <div class="col-md-1 d-grid">
+              <button type="button" class="btn btn-outline-danger js-remove-tech-contact">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+        <template id="techContactTemplate">
+          <div class="row g-3 align-items-end js-tech-contact-row">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Name</label>
+              <input type="text" name="tech_contact_name" class="form-control" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Email</label>
+              <input type="email" name="tech_contact_email" class="form-control" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Phone</label>
+              <input type="tel" name="tech_contact_phone" class="form-control" />
+            </div>
+            <div class="col-md-1 d-grid">
+              <button type="button" class="btn btn-outline-danger js-remove-tech-contact">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- HR Contact -->
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold d-flex justify-content-between align-items-center">
+        <div><i class="fas fa-user-tie text-warning me-2"></i>HR Contact</div>
+        <button type="button" class="btn btn-outline-primary btn-sm" id="addHrContactBtn">
+          <i class="fas fa-plus me-1"></i>Add Additional
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="row g-3 mb-3">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Primary Name</label>
+            <input type="text" name="hr_contact_name" class="form-control"
+                   value="{{ company.hr_contact_name if company else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Primary Email</label>
+            <input type="email" name="hr_contact_email" class="form-control"
+                   value="{{ company.hr_contact_email if company else '' }}" />
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Primary Phone</label>
+            <input type="tel" name="hr_contact_phone" class="form-control"
+                   value="{{ company.hr_contact_phone if company else '' }}" placeholder="+91 98765 43210" />
+          </div>
+        </div>
+        <div id="hrContactRows" class="d-grid gap-3">
+          {% if hr_contacts and hr_contacts|length %}
+          {% for contact in hr_contacts %}
+          <div class="row g-3 align-items-end js-hr-contact-row">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Name</label>
+              <input type="text" name="hr_contact_name_extra" class="form-control" value="{{ contact.name or '' }}" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Email</label>
+              <input type="email" name="hr_contact_email_extra" class="form-control" value="{{ contact.email or '' }}" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Phone</label>
+              <input type="tel" name="hr_contact_phone_extra" class="form-control" value="{{ contact.phone or '' }}" />
+            </div>
+            <div class="col-md-1 d-grid">
+              <button type="button" class="btn btn-outline-danger js-remove-hr-contact">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+          {% endif %}
+        </div>
+        <template id="hrContactTemplate">
+          <div class="row g-3 align-items-end js-hr-contact-row">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Name</label>
+              <input type="text" name="hr_contact_name_extra" class="form-control" />
+            </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Email</label>
+              <input type="email" name="hr_contact_email_extra" class="form-control" />
+            </div>
+            <div class="col-md-3">
+              <label class="form-label fw-semibold">Phone</label>
+              <input type="tel" name="hr_contact_phone_extra" class="form-control" />
+            </div>
+            <div class="col-md-1 d-grid">
+              <button type="button" class="btn btn-outline-danger js-remove-hr-contact">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right: Save panel -->
+  <div class="col-lg-4">
+    {% if company %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-body">
+        <h6 class="fw-bold">{{ company.name }}</h6>
+        <p class="text-muted small mb-1"><i class="fas fa-industry me-1"></i>{{ company.industry or 'N/A' }}</p>
+        <p class="text-muted small mb-1"><i class="fas fa-map-marker-alt me-1"></i>{{ company.city or '' }}{{ ', ' + company.state if company.state else '' }}</p>
+        <p class="text-muted small mb-0">
+          <i class="fas fa-circle me-1 {{ 'text-success' if company.is_verified else 'text-warning' }}"></i>
+          {{ 'Verified' if company.is_verified else 'Pending Verification' }}
+        </p>
+      </div>
+    </div>
+    {% endif %}
+    <div class="d-grid">
+      <button type="submit" class="btn btn-warning fw-bold py-2">
+        <i class="fas fa-save me-2"></i>Save Configuration
+      </button>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const addBtn = document.getElementById("addLocationBtn");
+    const rows = document.getElementById("locationRows");
+    const template = document.getElementById("locationRowTemplate");
+    const addTechBtn = document.getElementById("addTechContactBtn");
+    const techRows = document.getElementById("techContactRows");
+    const techTemplate = document.getElementById("techContactTemplate");
+    const addHrBtn = document.getElementById("addHrContactBtn");
+    const hrRows = document.getElementById("hrContactRows");
+    const hrTemplate = document.getElementById("hrContactTemplate");
+
+    function bindRemove(button) {
+      button.addEventListener("click", function () {
+        const row = button.closest(".js-location-row");
+        if (row && rows) {
+          rows.removeChild(row);
+        }
+      });
+    }
+
+    if (rows) {
+      rows.querySelectorAll(".js-remove-location").forEach(bindRemove);
+    }
+
+    function bindContactRemove(button, selector, container) {
+      button.addEventListener("click", function () {
+        const row = button.closest(selector);
+        if (row && container) {
+          container.removeChild(row);
+        }
+      });
+    }
+
+    if (techRows) {
+      techRows.querySelectorAll(".js-remove-tech-contact").forEach((btn) => {
+        bindContactRemove(btn, ".js-tech-contact-row", techRows);
+      });
+    }
+    if (hrRows) {
+      hrRows.querySelectorAll(".js-remove-hr-contact").forEach((btn) => {
+        bindContactRemove(btn, ".js-hr-contact-row", hrRows);
+      });
+    }
+
+    if (window.initIndiaCityState) {
+      window.initIndiaCityState();
+    }
+
+    if (addBtn && rows && template) {
+      addBtn.addEventListener("click", function () {
+        const fragment = template.content.cloneNode(true);
+        const newRow = fragment.querySelector(".js-location-row");
+        const removeBtn = fragment.querySelector(".js-remove-location");
+        if (removeBtn) {
+          bindRemove(removeBtn);
+        }
+        if (newRow) {
+          rows.appendChild(newRow);
+          if (window.initIndiaCityState) {
+            window.initIndiaCityState(newRow);
+          }
+        }
+      });
+    }
+
+    if (addTechBtn && techRows && techTemplate) {
+      addTechBtn.addEventListener("click", function () {
+        const fragment = techTemplate.content.cloneNode(true);
+        const newRow = fragment.querySelector(".js-tech-contact-row");
+        const removeBtn = fragment.querySelector(".js-remove-tech-contact");
+        if (removeBtn) {
+          bindContactRemove(removeBtn, ".js-tech-contact-row", techRows);
+        }
+        if (newRow) {
+          techRows.appendChild(newRow);
+        }
+      });
+    }
+
+    if (addHrBtn && hrRows && hrTemplate) {
+      addHrBtn.addEventListener("click", function () {
+        const fragment = hrTemplate.content.cloneNode(true);
+        const newRow = fragment.querySelector(".js-hr-contact-row");
+        const removeBtn = fragment.querySelector(".js-remove-hr-contact");
+        if (removeBtn) {
+          bindContactRemove(removeBtn, ".js-hr-contact-row", hrRows);
+        }
+        if (newRow) {
+          hrRows.appendChild(newRow);
+        }
+      });
+    }
+  });
+</script>
+{% endblock %}
+

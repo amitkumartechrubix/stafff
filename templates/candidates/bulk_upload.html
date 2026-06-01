@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-file-upload text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">Upload CSV, XLS, or XLSX files. Name and phone are required.</small>
+  </div>
+  <a href="/candidates" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left me-1"></i>Back to Candidates
+  </a>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body">
+        <form method="POST" action="/candidates/bulk-upload" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Upload File</label>
+            <input type="file" name="upload_file" class="form-control" accept=".csv,.xls,.xlsx" required />
+            <div class="form-text">Accepted formats: CSV, XLS, XLSX.</div>
+          </div>
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary fw-semibold">
+              <i class="fas fa-upload me-2"></i>Upload
+            </button>
+            <a href="/candidates/bulk-template" class="btn btn-outline-secondary">
+              <i class="fas fa-download me-2"></i>Download Template
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm si-info-card">
+      <div class="card-body">
+        <h6 class="fw-bold">Template Columns</h6>
+        <p class="text-muted small mb-2">Required: full_name, phone</p>
+        <p class="text-muted small mb-0">
+          email, age, date_of_birth, gender, qualification, location, city, state, skills,
+          experience_years, preferred_job_type, expected_salary, source, source_id, notes
+        </p>
+        <hr class="my-3" />
+        <p class="text-muted small mb-0">Date format: YYYY-MM-DD (e.g., 1995-08-21).</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

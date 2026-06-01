@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-tachometer-alt text-warning me-2"></i>Admin Dashboard</h4>
+    <small class="text-muted">Overview of platform activity</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/admin/users/new" class="btn btn-warning btn-sm fw-semibold">
+      <i class="fas fa-user-plus me-1"></i>Add User
+    </a>
+    <a href="/candidates/new" class="btn btn-outline-primary btn-sm fw-semibold">
+      <i class="fas fa-user-friends me-1"></i>New Candidate
+    </a>
+  </div>
+</div>
+
+<!-- Stats Row 1: Users & Candidates -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/admin/users">
+      <div class="si-stat-card si-stat-blue">
+        <div class="si-stat-icon"><i class="fas fa-users"></i></div>
+        <div class="si-stat-value">{{ stats.total_users }}</div>
+        <div class="si-stat-label">Total Users</div>
+        <div class="si-stat-sub">{{ stats.active_users }} active</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/candidates">
+      <div class="si-stat-card si-stat-green">
+        <div class="si-stat-icon"><i class="fas fa-user-friends"></i></div>
+        <div class="si-stat-value">{{ stats.total_candidates }}</div>
+        <div class="si-stat-label">Candidates</div>
+        <div class="si-stat-sub">{{ stats.active_candidates }} active</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/config/company">
+      <div class="si-stat-card si-stat-orange">
+        <div class="si-stat-icon"><i class="fas fa-building"></i></div>
+        <div class="si-stat-value">{{ stats.total_companies }}</div>
+        <div class="si-stat-label">Companies</div>
+        <div class="si-stat-sub">{{ stats.verified_companies }} verified</div>
+      </div>
+    </a>
+  </div>
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/institutions">
+      <div class="si-stat-card si-stat-purple">
+        <div class="si-stat-icon"><i class="fas fa-university"></i></div>
+        <div class="si-stat-value">{{ stats.total_institutions }}</div>
+        <div class="si-stat-label">Institutions</div>
+        <div class="si-stat-sub">Registered</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- Role breakdown + Recent activity -->
+<div class="row g-3 mb-4">
+  <!-- Role Breakdown -->
+  <div class="col-md-5">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-chart-pie text-warning me-2"></i>Users by Role
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Role</th>
+              <th class="text-end">Count</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for role, count in role_breakdown %}
+            <tr>
+              <td>
+                {% set role_icons = {
+                  'admin': 'fa-user-shield text-primary',
+                  'employer': 'fa-briefcase text-info',
+                  'institution': 'fa-university text-purple',
+                  'manager': 'fa-user-tie text-success',
+                  'recruiter': 'fa-headset text-warning',
+                  'field_agent': 'fa-walking text-danger'
+                } %}
+                <i class="fas {{ role_icons.get(role.value, 'fa-user') }} me-2"></i>
+                {{ role.value.replace('_', ' ').title() }}
+              </td>
+              <td class="text-end"><span class="badge bg-secondary">{{ count }}</span></td>
+            </tr>
+            {% else %}
+            <tr><td colspan="2" class="text-center text-muted py-3">No users yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recent Users -->
+  <div class="col-md-7">
+    <div class="card border-0 shadow-sm h-100">
+      <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+        <span class="fw-semibold"><i class="fas fa-clock text-warning me-2"></i>Recently Added Users</span>
+        <a href="/admin/users" class="btn btn-outline-secondary btn-sm">View All</a>
+      </div>
+      <div class="card-body p-0">
+        <table class="table table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Name</th>
+              <th>Role</th>
+              <th>License</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for u in recent_users %}
+            <tr>
+              <td>
+                <div class="d-flex align-items-center gap-2">
+                  <div class="si-table-avatar">{{ u.initials }}</div>
+                  <div>
+                    <div class="fw-semibold small">{{ u.full_name }}</div>
+                    <small class="text-muted">{{ u.email }}</small>
+                  </div>
+                </div>
+              </td>
+              <td><span class="badge si-role-badge-{{ u.role.value }}">{{ u.role_display }}</span></td>
+              <td><small class="text-muted">{{ u.license_type.value | title }}</small></td>
+              <td>
+                {% if u.is_active %}
+                <span class="badge bg-success">Active</span>
+                {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="4" class="text-center text-muted py-3">No users yet</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent Candidates -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+    <span class="fw-semibold"><i class="fas fa-user-friends text-warning me-2"></i>Recently Registered Candidates</span>
+    <a href="/candidates" class="btn btn-outline-secondary btn-sm">View All</a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-sm table-hover mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>City / State</th>
+            <th>Qualification</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in recent_candidates %}
+          <tr>
+            <td class="fw-semibold">{{ c.full_name }}</td>
+            <td>{{ c.phone }}</td>
+            <td>{{ (c.city or '') + (', ' + c.state if c.state else '') or '—' }}</td>
+            <td>{{ c.qualification or '—' }}</td>
+            <td>
+              <span class="badge bg-{{ 'success' if c.status.value == 'active' else 'primary' if c.status.value == 'placed' else 'secondary' }}">
+                {{ c.status.value | title }}
+              </span>
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="5" class="text-center text-muted py-3">No candidates registered yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

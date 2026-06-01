@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <h4 class="fw-bold mb-0">
+    <i class="fas fa-university text-warning me-2"></i>{{ page_title }}
+  </h4>
+  <a href="/institutions" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left me-1"></i>Back
+  </a>
+</div>
+
+<form method="POST" action="{{ form_action }}" novalidate>
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-info-circle text-warning me-2"></i>Institution Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Institution Name <span class="text-danger">*</span></label>
+            <input type="text" name="name" class="form-control"
+                   value="{{ edit_institution.name if edit_institution else '' }}" required />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Type</label>
+            <select name="institution_type" class="form-select">
+              <option value="">— Select —</option>
+              {% for t in ['ITI (Industrial Training Institute)','Polytechnic College','Engineering College','Vocational Training Centre','Government College','Private College','Skill Development Centre','Other'] %}
+              <option {% if edit_institution and edit_institution.institution_type == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Address</label>
+            <textarea name="address" class="form-control" rows="2">{{ edit_institution.address if edit_institution else '' }}</textarea>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">City</label>
+              <select name="city" class="form-select js-city-select" id="institutionCity"
+                data-state-target="institutionState"
+                data-selected="{{ edit_institution.city if edit_institution else '' }}"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">State</label>
+              <select name="state" class="form-select js-state-select" id="institutionState"
+                data-selected="{{ edit_institution.state if edit_institution else '' }}"></select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">PIN Code</label>
+            <input type="text" name="pincode" class="form-control" maxlength="6"
+                   value="{{ edit_institution.pincode if edit_institution else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Affiliation / Board</label>
+            <input type="text" name="affiliation" class="form-control"
+                   value="{{ edit_institution.affiliation if edit_institution else '' }}" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Years of Operation</label>
+            <input type="number" name="years_of_operation" class="form-control" min="0"
+                   value="{{ edit_institution.years_of_operation if edit_institution else '' }}" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Student Strength</label>
+            <input type="number" name="student_strength" class="form-control" min="0"
+                   value="{{ edit_institution.student_strength if edit_institution else '' }}" />
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Courses Offered</label>
+            <textarea name="courses_offered" class="form-control" rows="3"
+                      placeholder="Electrician, Fitter, Welder, Plumber, COPA…">{{ edit_institution.courses_offered if edit_institution else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-id-badge text-warning me-2"></i>Point of Contact
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Name</label>
+            <input type="text" name="poc_name" class="form-control"
+                   value="{{ edit_institution.poc_name if edit_institution else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Designation</label>
+            <input type="text" name="poc_designation" class="form-control"
+                   value="{{ edit_institution.poc_designation if edit_institution else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Email</label>
+            <input type="email" name="poc_email" class="form-control"
+                   value="{{ edit_institution.poc_email if edit_institution else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Phone</label>
+            <input type="tel" name="poc_phone" class="form-control"
+                   value="{{ edit_institution.poc_phone if edit_institution else '' }}" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    {% if edit_institution %}
+    <div class="card border-0 shadow-sm mb-3">
+      <div class="card-header bg-white border-bottom fw-semibold">Status</div>
+      <div class="card-body">
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Verification Status</label>
+          <select name="is_verified" class="form-select">
+            <option value="1" {% if edit_institution.is_verified %}selected{% endif %}>Verified</option>
+            <option value="0" {% if not edit_institution.is_verified %}selected{% endif %}>Pending</option>
+          </select>
+        </div>
+        <div>
+          <label class="form-label fw-semibold">Active Status</label>
+          <select name="is_active" class="form-select">
+            <option value="1" {% if edit_institution.is_active %}selected{% endif %}>Active</option>
+            <option value="0" {% if not edit_institution.is_active %}selected{% endif %}>Inactive</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+    <div class="d-grid gap-2">
+      <button type="submit" class="btn btn-warning fw-bold py-2">
+        <i class="fas fa-save me-2"></i>{{ 'Save Changes' if edit_institution else 'Add Institution' }}
+      </button>
+      <a href="/institutions" class="btn btn-outline-secondary">Cancel</a>
+    </div>
+  </div>
+
+</div>
+</form>
+{% endblock %}

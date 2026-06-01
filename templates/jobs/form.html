@@ -1,0 +1,533 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-briefcase text-warning me-2"></i>{{ page_title }}</h4>
+  </div>
+  <a href="/jobs" class="btn btn-outline-secondary btn-sm">
+    <i class="fas fa-arrow-left me-1"></i>Back to Jobs
+  </a>
+</div>
+
+<form method="POST" action="{{ form_action }}" novalidate>
+<div class="row g-4">
+  <div class="col-lg-12">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-file-lines text-warning me-2"></i>Job Profile Mapping
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Company <span class="text-danger">*</span></label>
+                <select name="company_id" class="form-select" id="jobCompanySelect" required
+                  {% if employer_company_lock %}disabled data-locked="1"{% endif %}>
+              <option value="">— Select Registered Company —</option>
+              {% for c in companies %}
+                    <option value="{{ c.id }}" data-industry="{{ c.industry or '' }}"
+                      {% if employer_company_id and employer_company_id == c.id %}selected
+                      {% elif edit_job and edit_job.company_id == c.id %}selected
+                      {% endif %}>
+                {{ c.name }}{% if c.city or c.state %} — {{ c.city or '' }} {{ c.state or '' }}{% endif %}
+              </option>
+              {% endfor %}
+            </select>
+            {% if employer_company_lock and employer_company_id %}
+            <input type="hidden" name="company_id" value="{{ employer_company_id }}" />
+            {% endif %}
+            <div class="form-text">Choose from registered companies or mark as unregistered.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Industry Type</label>
+            <select name="industry" class="form-select" id="jobIndustrySelect">
+              {% set industries = [
+                'Manufacturing - Automotive','Manufacturing - Auto Components','Manufacturing - Aerospace','Manufacturing - Defense','Manufacturing - Electronics','Manufacturing - Mobile Devices','Manufacturing - Semiconductors','Manufacturing - Electrical Equipment','Manufacturing - Industrial Machinery','Manufacturing - Heavy Engineering','Manufacturing - Steel & Metals','Manufacturing - Cement','Manufacturing - Chemicals','Manufacturing - Pharmaceuticals','Manufacturing - Medical Devices','Manufacturing - Plastic & Rubber','Manufacturing - Packaging','Manufacturing - Paper & Pulp','Manufacturing - Textile & Apparel','Manufacturing - Leather & Footwear','Manufacturing - Furniture','Manufacturing - Food & Beverage','Manufacturing - FMCG','Manufacturing - Consumer Durables','Manufacturing - Glass & Ceramics','Manufacturing - Shipbuilding','Manufacturing - Printing & Publishing','Manufacturing - Toys','Manufacturing - Solar & Renewable','Manufacturing - Battery & EV','Manufacturing - Telecom Equipment','Manufacturing - Railway Equipment','Manufacturing - Oil & Gas Equipment','Manufacturing - Construction Materials','Manufacturing - Smart Devices & IoT','Manufacturing - Robotics & Automation','Manufacturing - Precision Engineering','Manufacturing - Industrial Components','Manufacturing - HVAC & Refrigeration','Manufacturing - Agriculture Equipment','Manufacturing - Maritime Equipment','Manufacturing - Mining Equipment','Manufacturing - Power Equipment','Manufacturing - Energy Storage','Manufacturing - Medical Consumables','Manufacturing - Personal Care','Manufacturing - Home & Kitchen','Manufacturing - Sports Goods','Manufacturing - Stationery','Manufacturing - Sanitaryware','Manufacturing - Pipes & Fittings','Manufacturing - Paints & Coatings','Manufacturing - Glassware','Manufacturing - Ceramics & Tiles','Manufacturing - Wood & Plywood','Manufacturing - Hand Tools','Manufacturing - Fasteners','Manufacturing - Electrical Cables','Manufacturing - Pumps & Valves','Manufacturing - Elevators & Escalators','Manufacturing - Packaging Machinery','Manufacturing - Food Processing','Manufacturing - Beverage Processing','Construction','Real Estate & Infrastructure','Agriculture','Mining','Logistics & Warehousing','Transportation & Mobility','Hospitality','Travel & Tourism','Security Services','Facility Management','Healthcare Support','Healthcare Services','Retail','E-Commerce','Banking','Financial Services','Insurance','Telecom','IT Services','Software & SaaS','BPO & Shared Services','Education & Training','Media & Entertainment','Staffing & Recruitment','Government & Public Sector','Non-Profit','Other'
+              ] %}
+              <option value="">— Select Industry —</option>
+              {% for ind in industries %}
+              <option value="{{ ind }}"
+                {% if edit_job and edit_job.industry == ind %}selected
+                {% elif employer_company_industry and employer_company_industry == ind %}selected
+                {% endif %}>{{ ind }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6" {% if employer_company_lock %}style="display: none;"{% endif %}>
+            <label class="form-label fw-semibold">Company not registered</label>
+            <div class="form-check mt-2">
+              <input class="form-check-input" type="checkbox" value="1" id="companyNotRegistered"
+                     name="company_not_registered"
+                     {% if edit_job and not edit_job.company_id %}checked{% endif %}>
+              <label class="form-check-label" for="companyNotRegistered">
+                Use a new company name
+              </label>
+            </div>
+          </div>
+          <div class="col-md-6" id="companyNameWrap" {% if employer_company_lock %}style="display: none;"{% endif %}>
+            <label class="form-label fw-semibold">Company Name (Unregistered) <span class="text-danger">*</span></label>
+            <input type="text" name="company_name" class="form-control"
+                   value="{{ edit_job.company_name if edit_job and edit_job.company_name else (edit_job.title if edit_job and not edit_job.company_id else '') }}"
+                   placeholder="Enter company name" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Job Profile</label>
+            {% set ns = namespace(label='') %}
+            {% for p in profiles %}
+              {% if edit_job and edit_job.profile_id == p.id %}
+                {% set ns.label = (p.designation or p.role_title) ~ ' (' ~ (p.min_experience or 0) ~ '-' ~ (p.max_experience or 0) ~ ' yrs)' %}
+              {% endif %}
+            {% endfor %}
+            <input type="hidden" name="profile_id" id="jobProfileId" value="{{ edit_job.profile_id if edit_job else '' }}" />
+            <input type="text" class="form-control" id="jobProfileSelect" list="jobProfileOptions"
+              placeholder="Start typing to search..."
+              value="{{ ns.label }}"
+              {% if current_user and current_user.role.value == 'employer' %}data-disable-filter="1"{% endif %} />
+            <datalist id="jobProfileOptions">
+              {% for p in profiles %}
+              <option value="{{ (p.designation or p.role_title) ~ ' (' ~ (p.min_experience or 0) ~ '-' ~ (p.max_experience or 0) ~ ' yrs)' }}"
+                data-id="{{ p.id }}"
+                data-role="{{ p.role_title | replace('\n',' ') }}"
+                data-designation="{{ (p.designation or '') | replace('\n',' ') }}"
+                data-industry="{{ (p.industry if p.industry is defined else '') | replace('\n',' ') }}"
+                data-min="{{ p.min_experience or '' }}"
+                data-max="{{ p.max_experience or '' }}"
+                data-skills="{{ (p.skills or '') | replace('\n',' ') }}"
+                data-jd="{{ (p.jd_summary or '') | replace('\n',' ') }}"
+                data-technical="{{ (p.technical_responsibilities or '') | replace('\n',' ') }}"
+                data-functional="{{ (p.functional_responsibilities or '') | replace('\n',' ') }}"></option>
+              {% endfor %}
+            </datalist>
+            <div class="form-text">Selecting a profile auto-fills JD fields.</div>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Designation</label>
+            <input type="text" name="designation" class="form-control" id="jobDesignation"
+                   value="{{ edit_job.designation if edit_job else '' }}" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Min Experience (yrs)</label>
+            <input type="number" name="min_experience" class="form-control" id="jobMinExp" min="0"
+                   value="{{ edit_job.min_experience if edit_job else '' }}" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Max Experience (yrs)</label>
+            <input type="number" name="max_experience" class="form-control" id="jobMaxExp" min="0"
+                   value="{{ edit_job.max_experience if edit_job else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Skills</label>
+            <textarea name="skills" class="form-control" id="jobSkills" rows="2">{{ edit_job.skills if edit_job else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-clipboard-list text-warning me-2"></i>Posting Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-3">
+                 <label class="form-label fw-semibold">Openings <span class="text-danger">*</span></label>
+                 <input type="number" name="openings" class="form-control" min="1" required
+                   value="{{ edit_job.openings if edit_job else '' }}" />
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">Employment Type</label>
+            <select name="employment_type" class="form-select">
+              <option value="">— Select —</option>
+              {% for t in ['Full Time','Part Time','Contract','Temporary','Internship'] %}
+              <option value="{{ t }}" {% if edit_job and edit_job.employment_type == t %}selected{% endif %}>{{ t }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Salary Range</label>
+            <input type="text" name="salary_range" class="form-control"
+                   value="{{ edit_job.salary_range if edit_job else '' }}" placeholder="e.g. 18,000 - 25,000" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Company Location</label>
+            <select name="company_location" class="form-select" id="jobLocationSelect">
+              <option value="">— Select Location —</option>
+              <option value="custom">Custom / New Location</option>
+            </select>
+            <div class="form-text">Choose a registered plant location or enter a custom one.</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">City</label>
+              <select name="location_city" class="form-select js-city-select" id="jobCity"
+                data-state-target="jobState"
+                data-selected="{{ edit_job.city if edit_job else '' }}"></select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label fw-semibold">State</label>
+              <select name="location_state" class="form-select js-state-select" id="jobState"
+                data-selected="{{ edit_job.state if edit_job else '' }}"></select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Complete Address</label>
+            <input type="text" name="location_address" class="form-control" id="jobAddress"
+                   value="{{ edit_job.address if edit_job else '' }}" />
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Plant Address</label>
+            <input type="text" name="plant_address" class="form-control" id="jobPlantAddress"
+                   value="{{ edit_job.plant_address if edit_job else '' }}" />
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-align-left text-warning me-2"></i>Job Description Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-12">
+            <label class="form-label fw-semibold">JD Summary</label>
+            <textarea name="jd_summary" class="form-control" id="jobSummary" rows="2">{{ edit_job.jd_summary if edit_job else '' }}</textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Technical Responsibilities</label>
+            <textarea name="technical_responsibilities" class="form-control" id="jobTechnical" rows="3">{{ edit_job.technical_responsibilities if edit_job else '' }}</textarea>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Functional Responsibilities</label>
+            <textarea name="functional_responsibilities" class="form-control" id="jobFunctional" rows="3">{{ edit_job.functional_responsibilities if edit_job else '' }}</textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-paper-plane text-warning me-2"></i>Publish
+      </div>
+      <div class="card-body py-2">
+        <div class="row g-3 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Status</label>
+            {% if edit_job and current_user and current_user.role.value == 'manager' %}
+            <select name="status" class="form-select">
+              <option value="active" {% if edit_job.status == 'active' %}selected{% endif %}>Active</option>
+              <option value="closed" {% if edit_job.status == 'closed' %}selected{% endif %}>Closed</option>
+            </select>
+            {% elif edit_job %}
+            <input type="text" class="form-control" value="{{ edit_job.status | title }}" readonly />
+            <input type="hidden" name="status" value="{{ edit_job.status }}" />
+            {% else %}
+            <input type="text" class="form-control" value="Active" readonly />
+            {% endif %}
+          </div>
+          {% if edit_job and current_user and current_user.role.value == 'manager' %}
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Active</label>
+            <select name="is_active" class="form-select">
+              <option value="1" {% if edit_job.is_active %}selected{% endif %}>Active</option>
+              <option value="0" {% if not edit_job.is_active %}selected{% endif %}>Inactive</option>
+            </select>
+          </div>
+          {% endif %}
+          {% if current_user and current_user.role.value in ['manager','recruiter'] %}
+          <div class="col-md-4">
+            <label class="form-label fw-semibold">Approval Status</label>
+            <select name="approval_status" class="form-select">
+              {% set approval = (edit_job.approval_status if edit_job else 'pending') or 'pending' %}
+              <option value="pending" {% if approval == 'pending' %}selected{% endif %}>Pending</option>
+              <option value="approved" {% if approval == 'approved' %}selected{% endif %}>Approved</option>
+              <option value="cancelled" {% if approval == 'cancelled' %}selected{% endif %}>Cancelled</option>
+            </select>
+          </div>
+          {% endif %}
+          <div class="col-md-4 ms-auto">
+            <div class="d-flex justify-content-end gap-2">
+              <button type="submit" class="btn btn-warning fw-bold">
+                <i class="fas fa-save me-2"></i>{{ 'Save Changes' if edit_job else 'Create Job' }}
+              </button>
+              <a href="/jobs" class="btn btn-outline-secondary">Cancel</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card border-0 shadow-sm si-info-card">
+      <div class="card-body">
+        <h6 class="fw-bold">Publishing Guidance</h6>
+        <p class="text-muted small mb-2">Select a Job Profile to auto-fill responsibilities and skills.</p>
+        <p class="text-muted small mb-2">You can edit fields after auto-fill to finalize the JD.</p>
+        <p class="text-muted small mb-0">Approval status is managed by managers and recruiters.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const companyLocations = {{ company_locations_map | tojson }};
+    const profileInput = document.getElementById("jobProfileSelect");
+    const profileId = document.getElementById("jobProfileId");
+    const profileList = document.getElementById("jobProfileOptions");
+    if (!profileInput || !profileList) return;
+
+    const companyToggle = document.getElementById("companyNotRegistered");
+    const companySelect = document.getElementById("jobCompanySelect");
+    const companyNameWrap = document.getElementById("companyNameWrap");
+    const companyNameInput = companyNameWrap ? companyNameWrap.querySelector("input[name='company_name']") : null;
+    const industrySelect = document.getElementById("jobIndustrySelect");
+    const locationSelect = document.getElementById("jobLocationSelect");
+    const cityInput = document.getElementById("jobCity");
+    const stateInput = document.getElementById("jobState");
+    const addressInput = document.getElementById("jobAddress");
+    const plantAddressInput = document.getElementById("jobPlantAddress");
+
+    function syncCompanyMode() {
+      if (!companyToggle || !companySelect || !companyNameWrap) return;
+      if (companySelect.dataset.locked === "1") return;
+      const useFreeText = companyToggle.checked;
+      if (useFreeText) {
+        companySelect.value = "";
+      }
+      companySelect.disabled = useFreeText;
+      companySelect.required = !useFreeText;
+      if (companyNameInput) {
+        companyNameInput.required = useFreeText;
+        if (!useFreeText) {
+          companyNameInput.value = "";
+        }
+      }
+      companyNameWrap.style.display = useFreeText ? "block" : "none";
+    }
+
+    function syncIndustryFromCompany() {
+      if (!companySelect || !industrySelect) return;
+      const option = companySelect.options[companySelect.selectedIndex];
+      if (!option) return;
+      const industry = option.dataset.industry || "";
+      if (industry) {
+        industrySelect.value = industry;
+        if (profileInput.dataset.disableFilter !== "1") {
+          filterProfilesByIndustry(industry);
+        }
+      }
+    }
+
+    function clearLocationFields() {
+      if (cityInput) cityInput.value = "";
+      if (stateInput) stateInput.value = "";
+      if (addressInput) addressInput.value = "";
+    }
+
+    function applyLocation(loc) {
+      if (cityInput) cityInput.value = loc.city || "";
+      if (stateInput) stateInput.value = loc.state || "";
+      if (addressInput) addressInput.value = loc.address || "";
+      if (plantAddressInput) {
+        plantAddressInput.value = loc.address || "";
+      }
+    }
+
+    function syncLocationOptions() {
+      if (!companySelect || !locationSelect) return;
+      const companyId = companySelect.value;
+      const locations = companyLocations[companyId] || [];
+      locationSelect.innerHTML = "";
+      const defaultOption = document.createElement("option");
+      defaultOption.value = "";
+      defaultOption.textContent = "— Select Location —";
+      locationSelect.appendChild(defaultOption);
+
+      const customOption = document.createElement("option");
+      customOption.value = "custom";
+      customOption.textContent = "Custom / New Location";
+      locationSelect.appendChild(customOption);
+
+      locations.forEach((loc) => {
+        const option = document.createElement("option");
+        option.value = String(loc.id || "");
+        option.dataset.city = loc.city || "";
+        option.dataset.state = loc.state || "";
+        option.dataset.address = loc.address || "";
+        if (loc.label) {
+          option.textContent = loc.label;
+        } else {
+          const labelParts = [loc.city, loc.state].filter(Boolean).join(", ");
+          option.textContent = labelParts || "Location";
+        }
+        locationSelect.appendChild(option);
+      });
+    }
+
+    function syncLocationFields() {
+      if (!locationSelect) return;
+      const selected = locationSelect.options[locationSelect.selectedIndex];
+      if (!selected) return;
+      if (selected.value === "custom" || selected.value === "") {
+        return;
+      }
+      applyLocation({
+        city: selected.dataset.city || "",
+        state: selected.dataset.state || "",
+        address: selected.dataset.address || "",
+      });
+    }
+
+    if (companyToggle) {
+      companyToggle.addEventListener("change", syncCompanyMode);
+      syncCompanyMode();
+    }
+
+    if (companySelect) {
+      companySelect.addEventListener("change", syncIndustryFromCompany);
+      companySelect.addEventListener("change", function () {
+        syncLocationOptions();
+        clearLocationFields();
+      });
+      syncIndustryFromCompany();
+      syncLocationOptions();
+    }
+
+    if (locationSelect) {
+      locationSelect.addEventListener("change", syncLocationFields);
+    }
+
+    if (addressInput && plantAddressInput) {
+      if (!plantAddressInput.value) {
+        plantAddressInput.value = addressInput.value || "";
+      }
+      addressInput.addEventListener("input", function () {
+        if (!plantAddressInput.dataset.edited) {
+          plantAddressInput.value = addressInput.value || "";
+        }
+      });
+      plantAddressInput.addEventListener("input", function () {
+        plantAddressInput.dataset.edited = "1";
+      });
+    }
+
+    const fields = {
+      designation: document.getElementById("jobDesignation"),
+      industry: document.getElementById("jobIndustrySelect"),
+      minExp: document.getElementById("jobMinExp"),
+      maxExp: document.getElementById("jobMaxExp"),
+      skills: document.getElementById("jobSkills"),
+      jd: document.getElementById("jobSummary"),
+      technical: document.getElementById("jobTechnical"),
+      functional: document.getElementById("jobFunctional"),
+    };
+
+    const allProfileOptions = Array.from(profileList.options).map((opt) => opt.cloneNode(true));
+
+    function normalizeValue(value) {
+      return (value || "").toString().trim().toLowerCase();
+    }
+
+    function filterProfilesByIndustry(industry) {
+      if (profileInput.dataset.disableFilter === "1") {
+        return;
+      }
+      profileList.innerHTML = "";
+      const selectedValue = profileInput.value;
+      const normalizedIndustry = normalizeValue(industry);
+      let matchCount = 0;
+
+      allProfileOptions.forEach((opt) => {
+        const optIndustry = (opt.dataset.industry || "").trim();
+        const normalizedOptionIndustry = normalizeValue(optIndustry);
+        if (!normalizedIndustry || !normalizedOptionIndustry || normalizedOptionIndustry === normalizedIndustry) {
+          profileList.appendChild(opt.cloneNode(true));
+          if (normalizedOptionIndustry && normalizedIndustry && normalizedOptionIndustry === normalizedIndustry) {
+            matchCount += 1;
+          }
+        }
+      });
+
+      if (normalizedIndustry && matchCount === 0) {
+        profileList.innerHTML = "";
+        allProfileOptions.forEach((opt) => {
+          profileList.appendChild(opt.cloneNode(true));
+        });
+        profileInput.value = selectedValue || "";
+      }
+    }
+
+    function applyProfile(option) {
+      if (!option) return;
+      const companyOption = companySelect ? companySelect.options[companySelect.selectedIndex] : null;
+      const companyName = companyOption ? (companyOption.textContent || "").trim() : "";
+      const industryName = industrySelect ? (industrySelect.value || "").trim() : "";
+      const cityName = cityInput ? (cityInput.value || "").trim() : "";
+      const stateName = stateInput ? (stateInput.value || "").trim() : "";
+      const locationText = [cityName, stateName].filter(Boolean).join(", ");
+      const designationText = (option.dataset.designation || option.dataset.role || "").trim();
+      const headerParts = [];
+      if (companyName) headerParts.push(`Company: ${companyName}`);
+      if (designationText) headerParts.push(`Designation: ${designationText}`);
+      if (industryName) headerParts.push(`Industry: ${industryName}`);
+      if (locationText) headerParts.push(`Location: ${locationText}`);
+      const headerBlock = headerParts.join("\n");
+      const summaryBody = option.dataset.jd || "";
+      if (fields.designation) {
+        fields.designation.value = option.dataset.designation || option.dataset.role || "";
+      }
+      if (fields.industry && option.dataset.industry) {
+        fields.industry.value = option.dataset.industry;
+        if (profileInput.dataset.disableFilter !== "1") {
+          filterProfilesByIndustry(option.dataset.industry);
+        }
+      }
+      if (fields.minExp) fields.minExp.value = option.dataset.min || "";
+      if (fields.maxExp) fields.maxExp.value = option.dataset.max || "";
+      if (fields.skills) fields.skills.value = option.dataset.skills || "";
+      if (fields.jd) {
+        const combined = headerBlock ? `${headerBlock}\n\n${summaryBody}` : summaryBody;
+        fields.jd.value = combined.trim();
+      }
+      if (fields.technical) fields.technical.value = option.dataset.technical || "";
+      if (fields.functional) fields.functional.value = option.dataset.functional || "";
+    }
+
+    function findProfileOption(value) {
+      const normalized = normalizeValue(value);
+      if (!normalized) return null;
+      return Array.from(profileList.options).find(
+        (opt) => normalizeValue(opt.value) === normalized
+      ) || null;
+    }
+
+    profileInput.addEventListener("input", function () {
+      const option = findProfileOption(profileInput.value || "");
+      if (!option) {
+        if (profileId) profileId.value = "";
+        return;
+      }
+      if (profileId) profileId.value = option.dataset.id || "";
+      applyProfile(option);
+    });
+
+    if (industrySelect) {
+      industrySelect.addEventListener("change", function () {
+        if (profileInput.dataset.disableFilter !== "1") {
+          filterProfilesByIndustry(industrySelect.value || "");
+        }
+      });
+      if (profileInput.dataset.disableFilter !== "1") {
+        filterProfilesByIndustry(industrySelect.value || "");
+      }
+    }
+
+    if (profileInput.value) {
+      const initial = findProfileOption(profileInput.value);
+      if (initial) {
+        if (profileId) profileId.value = initial.dataset.id || profileId.value;
+        applyProfile(initial);
+      }
+    }
+  });
+</script>
+{% endblock %}

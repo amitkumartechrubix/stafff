@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-user-graduate text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">{{ total }} student{{ 's' if total != 1 else '' }} found</small>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="/institutions/students/new" class="btn btn-warning fw-semibold">
+      <i class="fas fa-user-plus me-2"></i>Register Student
+    </a>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="card border-0 shadow-sm mb-4">
+  <div class="card-body py-3">
+    <form method="GET" action="/institutions/students" class="row g-2 align-items-end">
+      <div class="col-md-4">
+        <label class="form-label small fw-semibold mb-1">Search</label>
+        <div class="input-group input-group-sm">
+          <span class="input-group-text"><i class="fas fa-search"></i></span>
+          <input type="text" name="search" class="form-control" placeholder="Name, phone, email…"
+                 value="{{ search }}" />
+        </div>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">Status</label>
+        <select name="status" class="form-select form-select-sm">
+          <option value="">All</option>
+          {% for s in statuses %}
+          <option value="{{ s.value }}" {% if status_filter == s.value %}selected{% endif %}>
+            {{ s.value | title }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">State</label>
+        <select name="state" class="form-select form-select-sm js-state-select" id="studentFilterState"
+          data-selected="{{ state_filter }}"></select>
+      </div>
+      <div class="col-md-2">
+        <label class="form-label small fw-semibold mb-1">City</label>
+        <select name="city" class="form-select form-select-sm js-city-select" id="studentFilterCity"
+          data-state-target="studentFilterState"
+          data-selected="{{ city_filter }}"></select>
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+        <a href="/institutions/students" class="btn btn-outline-secondary btn-sm ms-1">Reset</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-dark">
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Phone</th>
+            <th>Location</th>
+            <th>Qualification</th>
+            <th>Age</th>
+            <th>Source</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in candidates %}
+          <tr class="js-row-link {{ 'table-success' if c.registered_with_layam else 'table-warning' if c.age is not none and c.age < 18 else '' }}" data-href="/institutions/students/{{ c.id }}?from=current">
+            <td class="text-muted small">{{ c.id }}</td>
+            <td>
+              <div class="fw-semibold">{{ c.full_name }}</div>
+              <small class="text-muted">{{ c.email or '' }}</small>
+              {% if c.registered_with_layam %}
+              <span class="badge bg-success ms-1">LR</span>
+              {% endif %}
+            </td>
+            <td>{{ c.phone }}</td>
+            <td class="small">{{ (c.city or '') + (', ' + c.state if c.state else '') or '—' }}</td>
+            <td class="small">{{ c.qualification or '—' }}</td>
+            <td class="small">
+              {{ c.age or '—' }}
+              {% if c.age is not none and c.age < 18 %}
+              <span class="badge bg-warning text-dark ms-1">Minor</span>
+              {% endif %}
+            </td>
+            <td class="small">{{ c.source.name if c.source else '—' }}</td>
+            <td>
+              <span class="badge
+                {{ 'bg-success' if c.status.value == 'active' else
+                   'bg-primary' if c.status.value == 'placed' else
+                   'bg-danger' if c.status.value == 'blacklisted' else
+                   'bg-secondary' }}">
+                {{ c.status.value | title }}
+              </span>
+            </td>
+            <td class="text-muted small">{{ c.registered_at.strftime('%d %b %Y') }}</td>
+            <td class="text-center">
+              <a href="/institutions/students/{{ c.id }}/edit" class="btn btn-outline-primary btn-sm" title="Edit">
+                <i class="fas fa-edit"></i>
+              </a>
+              {% if not c.registered_with_layam and (c.age is none or c.age >= 18) %}
+              <form method="POST" action="/institutions/students/{{ c.id }}/register-layam" class="d-inline">
+                <button type="submit" class="btn btn-success btn-sm" title="Register with Layam"
+                        onclick="return confirm('Register this student with Layam?');">
+                  <i class="fas fa-check-circle"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% else %}
+          <tr>
+            <td colspan="10" class="text-center py-5 text-muted">
+              <i class="fas fa-user-slash fa-3x mb-3 d-block text-light"></i>
+              No students found.
+              <a href="/institutions/students/new">Register the first student</a>.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-4">
+  <ul class="pagination pagination-sm justify-content-center">
+    <li class="page-item {{ 'disabled' if page == 1 }}">
+      <a class="page-link" href="?page={{ page-1 }}&search={{ search }}&status={{ status_filter }}&state={{ state_filter }}&city={{ city_filter }}">
+        <i class="fas fa-chevron-left"></i>
+      </a>
+    </li>
+    {% for p in range(1, total_pages + 1) %}
+    <li class="page-item {{ 'active' if p == page }}">
+      <a class="page-link" href="?page={{ p }}&search={{ search }}&status={{ status_filter }}&state={{ state_filter }}&city={{ city_filter }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {{ 'disabled' if page == total_pages }}">
+      <a class="page-link" href="?page={{ page+1 }}&search={{ search }}&status={{ status_filter }}&state={{ state_filter }}&city={{ city_filter }}">
+        <i class="fas fa-chevron-right"></i>
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

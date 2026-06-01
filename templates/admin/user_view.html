@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h4 class="fw-bold mb-0"><i class="fas fa-user text-warning me-2"></i>{{ page_title }}</h4>
+    <small class="text-muted">User record details</small>
+  </div>
+  <div class="d-flex gap-2">
+    {% if edit_url %}
+    <a href="{{ edit_url }}" class="btn btn-outline-primary btn-sm">
+      <i class="fas fa-edit me-1"></i>Edit
+    </a>
+    {% endif %}
+    <a href="{{ back_url or '/admin/users' }}" class="btn btn-outline-secondary btn-sm">
+      <i class="fas fa-arrow-left me-1"></i>{{ back_label or 'Back' }}
+    </a>
+  </div>
+</div>
+
+<div class="row g-4">
+  <div class="col-lg-8">
+    <div class="card border-0 shadow-sm mb-4">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-user-circle text-warning me-2"></i>Account Information
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <div class="text-muted small">Full Name</div>
+            <div class="fw-semibold">{{ view_user.full_name }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Username</div>
+            <div class="fw-semibold">{{ view_user.username }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Email</div>
+            <div class="fw-semibold">{{ view_user.email }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Phone</div>
+            <div class="fw-semibold">{{ view_user.phone or '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Role</div>
+            <div class="fw-semibold">{{ view_user.role_display }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">License</div>
+            <div class="fw-semibold">{{ view_user.license_type.value | title }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Seed Password</div>
+            <div class="fw-semibold">{{ view_user.seed_password or '-' }}</div>
+          </div>
+          <div class="col-md-6">
+            <div class="text-muted small">Status</div>
+            <div class="fw-semibold">{{ 'Active' if view_user.is_active else 'Inactive' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-0 shadow-sm">
+      <div class="card-header bg-white border-bottom fw-semibold">
+        <i class="fas fa-briefcase text-warning me-2"></i>Employee Details
+      </div>
+      <div class="card-body">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <div class="text-muted small">Employee ID</div>
+            <div class="fw-semibold">{{ view_user.employee_id or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Department</div>
+            <div class="fw-semibold">{{ view_user.department or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Reporting Manager</div>
+            <div class="fw-semibold">{{ view_user.reporting_manager or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Qualification</div>
+            <div class="fw-semibold">{{ view_user.qualification or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Experience (Years)</div>
+            <div class="fw-semibold">{{ view_user.experience_years or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Joining Date</div>
+            <div class="fw-semibold">{{ view_user.joining_date.strftime('%d %b %Y') if view_user.joining_date else '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Date of Birth</div>
+            <div class="fw-semibold">{{ view_user.date_of_birth.strftime('%d %b %Y') if view_user.date_of_birth else '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Gender</div>
+            <div class="fw-semibold">{{ view_user.gender or '-' }}</div>
+          </div>
+          <div class="col-md-4">
+            <div class="text-muted small">Emergency Contact</div>
+            <div class="fw-semibold">{{ view_user.emergency_contact or '-' }}</div>
+          </div>
+          <div class="col-12">
+            <div class="text-muted small">Address</div>
+            <div class="fw-semibold">{{ view_user.address or '-' }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-4">
+        <div class="si-avatar-lg mx-auto mb-3">
+          {{ view_user.initials }}
+        </div>
+        <h6 class="fw-bold">{{ view_user.full_name }}</h6>
+        <p class="text-muted small">{{ view_user.role_display }}</p>
+        <span class="badge {{ 'bg-success' if view_user.is_active else 'bg-secondary' }}">
+          {{ 'Active' if view_user.is_active else 'Inactive' }}
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

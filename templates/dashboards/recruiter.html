@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Recruiter Dashboard{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <h4 class="fw-bold mb-0"><i class="fas fa-headset text-warning me-2"></i>Recruiter Dashboard</h4>
+  <small class="text-muted">Welcome, {{ current_user.full_name }}!</small>
+</div>
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <a class="si-stat-link" href="/candidates">
+      <div class="si-stat-card si-stat-orange">
+        <div class="si-stat-icon"><i class="fas fa-user-friends"></i></div>
+        <div class="si-stat-value">{{ my_candidates_count }}</div>
+        <div class="si-stat-label">Candidates Sourced</div>
+      </div>
+    </a>
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-4">
+        <i class="fas fa-user-plus fa-3x text-warning mb-3"></i>
+        <h6 class="fw-bold">Register Candidate</h6>
+        <p class="text-muted small">Add a new candidate you've sourced.</p>
+        <a href="/candidates/new" class="btn btn-warning btn-sm fw-semibold">Register</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-4">
+        <i class="fas fa-list fa-3x text-secondary mb-3"></i>
+        <h6 class="fw-bold">All Candidates</h6>
+        <p class="text-muted small">View all candidates in the system.</p>
+        <a href="/candidates" class="btn btn-secondary btn-sm fw-semibold">View All</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4">
+    <div class="card border-0 shadow-sm">
+      <div class="card-body text-center py-4">
+        <i class="fas fa-clipboard-check fa-3x text-primary mb-3"></i>
+        <h6 class="fw-bold">Start Staffing</h6>
+        <p class="text-muted small">Open assigned job positions and begin staffing.</p>
+        <a href="/jobs" class="btn btn-primary btn-sm fw-semibold">Start Staffing</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
