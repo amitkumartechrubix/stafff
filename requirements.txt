@@ -14,3 +14,4 @@ xlrd==2.0.1
 reportlab==4.2.2
 pytesseract==0.3.10
 Pillow==10.4.0
+PyMySQL==1.1.1
